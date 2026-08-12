@@ -1,0 +1,3342 @@
+<html lang="ko"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TAILDERN 자사몰 대시보드</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #F7F7F5;
+    --surface: #FFFFFF;
+    --surface-2: #FAFAF9;
+    --border: #ECEAE7;
+    --border-strong: #D6D3D1;
+    --text: #1C1917;
+    --text-2: #57534E;
+    --text-3: #A8A29E;
+    --accent: #0F172A;
+    --gold: #C8A567;
+    --good: #059669;
+    --good-bg: #D1FAE5;
+    --warn: #B45309;
+    --warn-bg: #FEF3C7;
+    --bad: #DC2626;
+    --bad-bg: #FEE2E2;
+    /* dark container */
+    --dark: #0F172A;
+    --dark-2: #1E293B;
+    --dark-border: #1E293B;
+    --dark-text: #F1F5F9;
+    --dark-text-2: #94A3B8;
+    --dark-text-3: #64748B;
+  }
+  body {
+    font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Header */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+    position: sticky; top: 0; z-index: 30;
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand-mark {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: linear-gradient(135deg, #0F172A 0%, #334155 100%);
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 15px; letter-spacing: 0.05em;
+  }
+  .brand-eyebrow {
+    font-size: 10.5px; color: var(--text-3);
+    letter-spacing: 0.2em; text-transform: uppercase;
+    margin-bottom: 2px; font-weight: 600;
+  }
+  .brand-title { font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+  .header-actions { display: flex; align-items: center; gap: 10px; }
+  .date { font-size: 12px; color: var(--text-3); margin-right: 4px; }
+  .btn {
+    background: var(--surface); border: 1px solid var(--border-strong);
+    color: var(--text-2); padding: 8px 14px; border-radius: 8px;
+    cursor: pointer; font-size: 12.5px;
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: inherit; font-weight: 500; transition: all 0.15s;
+  }
+  .btn:hover { background: var(--surface-2); border-color: #A8A29E; }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-primary:hover { background: #1E293B; }
+
+  .container { padding: 18px 24px 40px; max-width: none; margin: 0; }
+
+  /* Page title */
+  .page-head { margin-bottom: 14px; }
+  .page-title { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; color: var(--text); }
+  .page-sub { font-size: 12.5px; color: var(--text-2); margin-top: 4px; }
+
+  /* KPI Row */
+  .kpi-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px; }
+  @media (max-width: 1300px) { .kpi-row { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  @media (max-width: 720px) { .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .kpi-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 13px;
+    display: flex; flex-direction: column; gap: 5px;
+    min-height: 92px; min-width: 0; overflow: hidden;
+    transition: box-shadow 0.15s, border-color 0.15s;
+  }
+  .kpi-card:hover { box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06); border-color: var(--border-strong); }
+  .kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+  .kpi-label {
+    font-size: 10px; color: var(--text-3); text-transform: uppercase;
+    letter-spacing: 0.04em; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .kpi-change {
+    display: inline-flex; align-items: center; gap: 2px;
+    font-size: 10.5px; font-weight: 700; white-space: nowrap; flex-shrink: 0;
+  }
+  .ch-up { color: var(--good); }
+  .ch-down { color: var(--bad); }
+  .ch-flat { color: var(--text-3); }
+  .kpi-value { font-size: 19px; font-weight: 800; color: var(--text); letter-spacing: -0.03em; line-height: 1.05; white-space: nowrap; }
+  .kpi-spark { height: 22px; position: relative; margin-top: auto; }
+
+  /* STEP */
+  .step-row { display: grid; gap: 14px; margin-bottom: 16px; }
+  .step-2col { grid-template-columns: 1.6fr 1fr; }
+  @media (max-width: 1100px) { .step-2col { grid-template-columns: 1fr; } }
+
+  .step-head { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+  .step-num {
+    font-size: 11px; font-weight: 800; letter-spacing: 0.1em;
+    color: var(--gold); border: 1.5px solid var(--gold);
+    padding: 3px 9px; border-radius: 6px; flex-shrink: 0;
+  }
+  .step-titles { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .step-title { font-size: 16px; font-weight: 700; color: var(--text); }
+  .step-desc { font-size: 13px; color: var(--text-2); }
+
+  /* Chart card (white) */
+  .dark-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 18px; color: var(--text);
+  }
+  .dark-card .dc-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+  .dark-card .dc-sub { font-size: 12px; color: var(--text-3); margin-bottom: 14px; }
+
+  /* Light card */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 18px;
+  }
+  .card-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+  .card-subtitle { font-size: 12px; color: var(--text-3); margin-bottom: 14px; }
+
+  .chart-wrap { position: relative; height: 240px; }
+  .chart-wrap-md { position: relative; height: 215px; }
+  .chart-wrap-sm { position: relative; height: 170px; }
+
+  /* Donut center */
+  .donut-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; }
+  .donut-center-value { font-size: 17px; font-weight: 800; color: var(--text); }
+  .donut-center-label { font-size: 10.5px; color: var(--text-3); margin-top: 2px; letter-spacing: 0.04em; }
+
+  .dark-legend-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 7px 0; font-size: 12.5px; border-bottom: 1px solid var(--border);
+  }
+  .dark-legend-row:last-child { border-bottom: none; }
+  .dark-legend-left { display: flex; align-items: center; gap: 8px; color: var(--text); font-weight: 500; }
+  .dark-legend-value { color: var(--text); font-weight: 700; }
+  .dark-legend-amt { color: var(--text-3); font-size: 11px; margin-left: 6px; font-weight: 400; }
+
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left; padding: 10px 8px; font-size: 10.5px; color: var(--text-3);
+    text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;
+    border-bottom: 1px solid var(--border);
+  }
+  th.right, td.right { text-align: right; }
+  td { padding: 12px 8px; border-bottom: 1px solid var(--border); color: var(--text); }
+  tr:last-child td { border-bottom: none; }
+  .channel-name { color: var(--text); font-weight: 600; }
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 100px; font-size: 11px; font-weight: 700; }
+  .badge-good { background: var(--good-bg); color: var(--good); }
+  .badge-bad { background: var(--bad-bg); color: var(--bad); }
+  .badge-neutral { background: #F5F5F4; color: var(--text-2); }
+
+  /* Insights */
+  .insights { display: flex; flex-direction: column; gap: 10px; }
+  .insight { display: flex; gap: 11px; padding: 12px; border-radius: 11px; background: var(--surface-2); border: 1px solid var(--border); }
+  .insight-icon { flex-shrink: 0; width: 22px; height: 22px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
+  .icon-good { background: var(--good-bg); color: var(--good); }
+  .icon-warn { background: var(--warn-bg); color: var(--warn); }
+  .icon-bad { background: var(--bad-bg); color: var(--bad); }
+  .insight-text { color: var(--text); font-size: 12.5px; line-height: 1.5; font-weight: 500; }
+  .insight-action { font-size: 11.5px; color: var(--text-2); margin-top: 4px; line-height: 1.45; }
+  .insight-action::before { content: '↳ '; color: var(--gold); font-weight: 700; }
+
+  /* Funnel (light) */
+  .funnel-step { display: flex; align-items: center; gap: 14px; padding: 8px 0; }
+  .funnel-step-label { width: 150px; flex-shrink: 0; }
+  .funnel-step-title { font-size: 13px; color: var(--text); font-weight: 600; margin-bottom: 2px; }
+  .funnel-step-sub { font-size: 10.5px; color: var(--text-3); }
+  .funnel-bar-wrap { flex: 1; position: relative; height: 32px; background: var(--surface-2); border-radius: 7px; overflow: hidden; border: 1px solid var(--border); }
+  .funnel-bar-fill { height: 100%; background: linear-gradient(90deg, #3B82F6 0%, #60A5FA 100%); border-radius: 6px; display: flex; align-items: center; padding: 0 12px; transition: width 0.6s ease; min-width: 42px; }
+  .funnel-bar-text { font-size: 12px; color: #fff; font-weight: 700; }
+  .funnel-step-value { width: 92px; text-align: right; flex-shrink: 0; }
+  .funnel-value-num { font-size: 14px; color: var(--text); font-weight: 700; }
+  .funnel-value-pct { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+  .funnel-arrow { margin-left: 164px; margin-right: 92px; padding: 3px 0; display: flex; align-items: center; gap: 10px; font-size: 11px; }
+  .funnel-arrow-line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--border-strong) 50%, transparent); }
+  .funnel-rate { padding: 3px 9px; border-radius: 100px; font-weight: 700; font-size: 10.5px; }
+  .rate-good { background: var(--good-bg); color: var(--good); }
+  .rate-ok { background: #FEF9C3; color: #A16207; }
+  .rate-bad { background: var(--bad-bg); color: var(--bad); }
+  .funnel-bench { color: var(--text-3); font-size: 10.5px; }
+  .funnel-leak { color: var(--text-2); font-size: 10.5px; }
+  @media (max-width: 768px) {
+    .funnel-step-label { width: 108px; }
+    .funnel-step-value { width: 72px; }
+    .funnel-arrow { margin-left: 122px; margin-right: 72px; }
+  }
+
+  /* Product bars */
+  .product-row { margin-bottom: 15px; }
+  .product-row:last-child { margin-bottom: 0; }
+  .product-line { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; margin-bottom: 6px; }
+  .product-name { color: var(--text); font-weight: 500; }
+  .product-revenue { color: var(--text-2); font-weight: 700; font-size: 12px; }
+  .bar-bg { width: 100%; height: 7px; background: var(--surface-2); border-radius: 4px; overflow: hidden; border: 1px solid var(--border); }
+  .bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+
+  /* Traffic rows */
+  .traffic-row { margin-bottom: 14px; }
+  .traffic-row:last-child { margin-bottom: 0; }
+  .traffic-line { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; margin-bottom: 6px; gap: 8px; }
+  .traffic-name { color: var(--text); font-weight: 600; white-space: nowrap; }
+  .traffic-meta { color: var(--text-2); font-size: 11.5px; text-align: right; white-space: nowrap; }
+  .traffic-meta b { color: var(--text); font-weight: 700; }
+
+  /* Mix TOP 5 */
+  .mix-row { display: flex; gap: 13px; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .mix-row:last-child { border-bottom: none; }
+  .mix-rank {
+    flex-shrink: 0; width: 26px; height: 26px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 800; color: #fff; background: var(--text-3);
+  }
+  .mix-rank.r1 { background: linear-gradient(135deg, #C8A567, #B58A2D); }
+  .mix-rank.r2 { background: #64748B; }
+  .mix-rank.r3 { background: #94A3B8; }
+  .mix-body { flex: 1; min-width: 0; }
+  .mix-line { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+  .mix-name { color: var(--text); font-weight: 600; font-size: 13px; }
+  .mix-name .mix-x { color: var(--text-3); font-weight: 500; margin: 0 3px; }
+  .mix-rev { color: var(--text); font-weight: 700; font-size: 13px; white-space: nowrap; }
+  .mix-share { color: var(--good); font-weight: 700; font-size: 11.5px; }
+  .mix-meta { font-size: 11px; color: var(--text-3); margin-top: 5px; }
+  .mix-meta b { color: var(--text-2); font-weight: 700; }
+
+  /* Modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5); backdrop-filter: blur(4px); z-index: 50; align-items: flex-start; justify-content: center; padding: 24px; overflow-y: auto; }
+  .modal-overlay.active { display: flex; }
+  .modal { background: var(--surface); border-radius: 18px; max-width: 1100px; width: 100%; margin: 20px 0; box-shadow: 0 24px 70px rgba(0,0,0,0.18); }
+  .modal-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: var(--surface); z-index: 1; border-top-left-radius: 18px; border-top-right-radius: 18px; }
+  .modal-title { font-size: 17px; font-weight: 700; color: var(--text); }
+  .modal-subtitle { font-size: 12.5px; color: var(--text-3); margin-top: 4px; }
+  .modal-close { background: transparent; border: none; color: var(--text-3); cursor: pointer; padding: 6px 10px; border-radius: 8px; font-size: 22px; line-height: 1; }
+  .modal-close:hover { background: var(--surface-2); color: var(--text); }
+  .modal-body { padding: 24px; display: flex; flex-direction: column; gap: 24px; }
+  .form-section h3 { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+  .form-input { background: var(--surface); border: 1px solid var(--border-strong); color: var(--text); padding: 6px 10px; border-radius: 6px; font-family: inherit; font-size: 13px; }
+  .form-input:focus { outline: none; border-color: var(--accent); }
+  .form-input.right { text-align: right; }
+  .form-table { width: 100%; }
+  .form-table th { text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  .form-table th:first-child { text-align: left; }
+  .form-table td { padding: 5px 8px; border-bottom: 1px solid var(--border); }
+  .form-table td:not(:first-child) { text-align: right; }
+  .form-add-btn { background: var(--accent); color: #fff; padding: 5px 12px; border-radius: 6px; border: none; font-size: 11.5px; font-weight: 700; cursor: pointer; font-family: inherit; }
+  .form-add-btn:hover { background: #1E293B; }
+  .row-delete { background: transparent; border: none; color: var(--text-3); cursor: pointer; font-size: 16px; padding: 2px 6px; }
+  .row-delete:hover { color: var(--bad); }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .btn-cancel { background: transparent; border: 1px solid var(--border-strong); color: var(--text-2); padding: 9px 18px; cursor: pointer; font-family: inherit; font-size: 13px; border-radius: 8px; font-weight: 500; }
+  .btn-save { background: var(--accent); color: #fff; padding: 9px 20px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
+  .btn-save:hover { background: #1E293B; }
+  .form-hint { font-size: 11px; color: var(--text-3); margin-top: 6px; }
+
+  /* Toast */
+  .toast { position: fixed; top: 24px; right: 24px; background: var(--text); color: #fff; padding: 12px 18px; border-radius: 10px; font-size: 13px; font-weight: 600; z-index: 60; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+  .toast.show { display: block; animation: slideIn 0.3s ease; }
+  @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  .footer { padding: 16px 0; text-align: center; font-size: 11px; color: var(--text-3); border-top: 1px solid var(--border); margin-top: 8px; }
+
+  /* 주차 네비게이션 */
+  .week-nav { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .week-nav-label { font-size: 11px; color: var(--text-3); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; margin-right: 2px; }
+  .week-nav-btn {
+    background: var(--surface); border: 1.5px solid var(--border-strong);
+    color: var(--text-2); padding: 6px 14px; border-radius: 8px;
+    cursor: pointer; font-size: 13px; font-weight: 600;
+    font-family: inherit; transition: all 0.15s;
+  }
+  .week-nav-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .week-nav-btn:disabled { opacity: 0.3; cursor: default; }
+  .week-nav-select {
+    font-size: 13px; font-weight: 700; color: var(--text);
+    background: var(--surface); border: 1.5px solid var(--accent);
+    border-radius: 8px; padding: 6px 12px; cursor: pointer;
+    font-family: inherit; min-width: 90px;
+  }
+  .week-nav-select:focus { outline: none; }
+  .week-nav-count { font-size: 11.5px; color: var(--text-3); margin-left: 4px; }
+
+  /* 월별 테이블 */
+  .monthly-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .monthly-table th {
+    text-align: left; padding: 10px 10px;
+    font-size: 10.5px; color: var(--text-3);
+    text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;
+    border-bottom: 1px solid var(--border);
+  }
+  .monthly-table th.right, .monthly-table td.right { text-align: right; }
+  .monthly-table td { padding: 12px 10px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .monthly-table tr:last-child td { border-bottom: none; }
+  .monthly-table tr.total-row td { font-weight: 700; color: var(--text); background: var(--surface-2); }
+  .month-badge {
+    display: inline-block; padding: 2px 9px; border-radius: 6px;
+    background: var(--accent); color: #fff;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.03em;
+  }
+
+  /* PDF / Print */
+  .card, .dark-card, .kpi-card { break-inside: avoid; }
+  .step-head { break-after: avoid; }
+  @media print {
+    .header-actions, .toast, .modal-overlay { display: none !important; }
+    .header { position: static; }
+    body { background: #fff; }
+    .container { padding: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="toast" id="toast">✓ 백업 다운로드 완료</div>
+
+<div class="header">
+  <div class="brand">
+    <div class="brand-mark">T</div>
+    <div>
+      <div class="brand-eyebrow"><span id="brand-name">TAILDERN</span> · Weekly Dashboard</div>
+      <div class="brand-title">테일던 자사몰 유입 현황 · <span id="current-week">W32</span></div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <div class="date" id="today">2026년 8월 12일</div>
+    <button class="btn" onclick="exportData()" title="현재 데이터를 JSON 파일로 백업">⬇ 백업</button>
+    <button class="btn" onclick="document.getElementById('import-file').click()" title="백업 파일에서 데이터 복원">⬆ 복원</button>
+    <input type="file" id="import-file" style="display:none" accept="application/json,.json" onchange="importData(event)">
+    <button class="btn" id="share-btn" onclick="exportWithData()" title="데이터가 포함된 HTML 파일 — 받는 사람이 파일만 열면 바로 보여요" style="border-color:var(--gold);color:var(--gold);" disabled="">⏳ 생성 중...</button>
+    <button class="btn" id="pdf-btn" onclick="exportPDF()" title="이 페이지를 PDF로 저장">📄 PDF 저장</button>
+    <button class="btn btn-primary" onclick="openModal()">✎ 데이터 업데이트</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="page-head">
+    <div class="page-title">테일던 자사몰 유입 현황</div>
+    <div class="page-sub">한눈에 보는 자사몰 광고 효율과 전환 흐름 · <span id="week-range">W18 ~ W32</span></div>
+  </div>
+
+  <!-- 주차 네비게이션 -->
+  <div class="week-nav" id="week-nav">
+    <span class="week-nav-label">주차</span>
+    <button class="week-nav-btn" id="week-prev-btn" onclick="navWeek(-1)">← 이전</button>
+    <select class="week-nav-select" id="week-select" onchange="selectWeek(parseInt(this.value))"><option value="0">W18</option><option value="1">W19</option><option value="2">W20</option><option value="3">W21</option><option value="4">W22</option><option value="5">W23</option><option value="6">W24</option><option value="7">W25</option><option value="8">W26</option><option value="9">W27</option><option value="10">W28</option><option value="11">W29</option><option value="12">W30</option><option value="13">W31</option><option value="14" selected="">W32</option></select>
+    <button class="week-nav-btn" id="week-next-btn" onclick="navWeek(1)" disabled="">다음 →</button>
+    <span class="week-nav-count" id="week-nav-count">15 / 15주차</span>
+  </div>
+
+  <!-- KPI -->
+  <div class="kpi-row" id="kpi-row"><div class="kpi-card"><div class="kpi-top"><span class="kpi-label">총 광고비</span><span class="kpi-change ch-up">▼ 25.2%</span></div><div class="kpi-value">₩92.5만</div><div class="kpi-spark"><canvas id="spark-adspend" width="217" height="27" style="display: block; box-sizing: border-box; height: 22px; width: 174px;"></canvas></div></div><div class="kpi-card"><div class="kpi-top"><span class="kpi-label">총 매출 (실결제)</span><span class="kpi-change ch-down">▼ 74.4%</span></div><div class="kpi-value">₩34.1만</div><div class="kpi-spark"><canvas id="spark-revenue" width="217" height="27" style="display: block; box-sizing: border-box; height: 22px; width: 174px;"></canvas></div></div><div class="kpi-card"><div class="kpi-top"><span class="kpi-label">광고 ROAS</span><span class="kpi-change ch-flat">—</span></div><div class="kpi-value">-</div><div class="kpi-spark" style="display:flex;align-items:center;"><span style="font-size:10px;color:var(--text-3)">채널 기여 기준</span></div></div><div class="kpi-card"><div class="kpi-top"><span class="kpi-label">MER (전체효율)</span><span class="kpi-change ch-down">▼ 65.8%</span></div><div class="kpi-value">37%</div><div class="kpi-spark"><canvas id="spark-mer" width="217" height="27" style="display: block; box-sizing: border-box; height: 22px; width: 174px;"></canvas></div></div><div class="kpi-card"><div class="kpi-top"><span class="kpi-label">CVR</span><span class="kpi-change ch-down">▼ 39.4%</span></div><div class="kpi-value">0.40%</div><div class="kpi-spark"><canvas id="spark-cvr" width="217" height="27" style="display: block; box-sizing: border-box; height: 22px; width: 174px;"></canvas></div></div><div class="kpi-card"><div class="kpi-top"><span class="kpi-label">객단가 AOV</span><span class="kpi-change ch-down">▼ 59.0%</span></div><div class="kpi-value">₩6.8만</div><div class="kpi-spark"><canvas id="spark-aov" width="217" height="27" style="display: block; box-sizing: border-box; height: 22px; width: 174px;"></canvas></div></div><div class="kpi-card"><div class="kpi-top"><span class="kpi-label">CPA</span><span class="kpi-change ch-down">▲ 19.7%</span></div><div class="kpi-value">₩18.5만</div><div class="kpi-spark"><canvas id="spark-cpa" width="217" height="27" style="display: block; box-sizing: border-box; height: 22px; width: 174px;"></canvas></div></div></div>
+
+  <!-- 월별 누계 -->
+  <div>
+    <div class="step-head">
+      <span class="step-num" style="background:var(--gold);color:#1C1917;">월별</span>
+      <div class="step-titles">
+        <span class="step-title">월별 누계 현황</span>
+        <span class="step-desc">— 주차별 데이터를 월 단위로 자동 집계해요</span>
+      </div>
+    </div>
+    <div class="step-row step-2col">
+      <div class="card">
+        <div class="card-title">월별 매출 &amp; 광고비</div>
+        <div class="card-subtitle">월 단위 집계 · 매출(실결제) vs 광고비</div>
+        <div class="chart-wrap-sm"><canvas id="chart-monthly" style="box-sizing: border-box; display: block; height: 170px; width: 1096px;" width="1096" height="170"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">월별 누계 테이블</div>
+        <div class="card-subtitle">방문수 · 주문 · 매출 · 광고비 · MER 자동 합산</div>
+        <div style="overflow-x:auto; max-height:340px; overflow-y:auto;"><table class="monthly-table" id="table-monthly"><thead><tr><th>월</th><th class="right">방문수</th><th class="right">주문수</th><th class="right">매출(실결제)</th><th class="right">광고비</th><th class="right">MER</th><th class="right">객단가</th></tr></thead><tbody><tr><td colspan="7" style="padding:12px 10px 6px;font-size:11px;font-weight:800;color:var(--text-3);letter-spacing:0.08em;text-transform:uppercase;border-bottom:2px solid var(--border-strong);background:var(--surface-2);">2026년</td></tr><tr><td><span class="month-badge">2026-05</span><div style="font-size:10px;color:var(--text-3);margin-top:3px">W18 · W19 · W20 · W21 (4주)</div></td><td class="right">5,620</td><td class="right">27</td><td class="right"><strong>₩481.1만</strong></td><td class="right">₩337.0만</td><td class="right" style="">143%</td><td class="right">₩17.8만</td></tr><tr><td><span class="month-badge">2026-06</span><div style="font-size:10px;color:var(--text-3);margin-top:3px">W22 · W23 · W24 · W25 · W26 (5주)</div></td><td class="right">12,879</td><td class="right">59</td><td class="right"><strong>₩596.6만</strong></td><td class="right">₩873.1만</td><td class="right" style="color:var(--bad);font-weight:700">68%</td><td class="right">₩10.1만</td></tr><tr><td><span class="month-badge">2026-07</span><div style="font-size:10px;color:var(--text-3);margin-top:3px">W27 · W28 · W29 · W30 · W31 (5주)</div></td><td class="right">17,578</td><td class="right">91</td><td class="right"><strong>₩861.1만</strong></td><td class="right">₩655.2만</td><td class="right" style="">131%</td><td class="right">₩9.5만</td></tr><tr><td><span class="month-badge">2026-08</span><div style="font-size:10px;color:var(--text-3);margin-top:3px">W32 (1주)</div></td><td class="right">1,657</td><td class="right">5</td><td class="right"><strong>₩34.1만</strong></td><td class="right">₩92.5만</td><td class="right" style="color:var(--bad);font-weight:700">37%</td><td class="right">₩6.8만</td></tr><tr class="total-row"><td><strong>합계</strong></td><td class="right">37,734</td><td class="right">182</td><td class="right"><strong>₩1973.0만</strong></td><td class="right">₩1957.8만</td><td class="right" style="">101%</td><td class="right">₩10.8만</td></tr></tbody></table></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 1 + STEP 2 -->
+  <div class="step-row step-2col">
+    <div>
+      <div class="step-head">
+        <span class="step-num">STEP 1</span>
+        <div class="step-titles">
+          <span class="step-title">매출 흐름 추이</span>
+          <span class="step-desc">— 주차별 성과 흐름을 파악하세요</span>
+        </div>
+      </div>
+      <div class="dark-card">
+        <div class="dc-title">주차별 매출 / 광고비 / 방문수</div>
+        <div class="dc-sub">최근 주차 데이터 기준</div>
+        <div class="chart-wrap"><canvas id="chart-trend" style="box-sizing: border-box; display: block; height: 240px; width: 1096px;" width="1096" height="240"></canvas></div>
+      </div>
+    </div>
+    <div>
+      <div class="step-head">
+        <span class="step-num">STEP 2</span>
+        <div class="step-titles">
+          <span class="step-title">광고비 구성</span>
+          <span class="step-desc">— 예산 분배</span>
+        </div>
+      </div>
+      <div class="dark-card">
+        <div class="dc-title">채널별 광고비 비중</div>
+        <div class="dc-sub">총 광고비 분배 비율</div>
+        <div style="position: relative;">
+          <div class="chart-wrap-md"><canvas id="chart-donut-ad" style="box-sizing: border-box; display: block; height: 215px; width: 1096px;" width="1370" height="268"></canvas></div>
+          <div class="donut-center" id="donut-center-ad"><div class="donut-center-value">₩92.5만</div><div class="donut-center-label">총 광고비</div></div>
+        </div>
+        <div id="donut-legend-ad" style="margin-top: 14px;"><div class="dark-legend-row"><div class="dark-legend-left"><span class="dot" style="background:#3B82F6"></span>META</div><div><span class="dark-legend-value">55.9%</span><span class="dark-legend-amt">₩51.7만</span></div></div><div class="dark-legend-row"><div class="dark-legend-left"><span class="dot" style="background:#1E40AF"></span>GOOGLE</div><div><span class="dark-legend-value">8.8%</span><span class="dark-legend-amt">₩8.1만</span></div></div><div class="dark-legend-row"><div class="dark-legend-left"><span class="dot" style="background:#60A5FA"></span>네이버</div><div><span class="dark-legend-value">35.3%</span><span class="dark-legend-amt">₩32.7만</span></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="step-row">
+    <div>
+      <div class="step-head">
+        <span class="step-num">STEP 3</span>
+        <div class="step-titles">
+          <span class="step-title">채널 효율 &amp; 진단</span>
+          <span class="step-desc">— 어디가 잘 되고, 어디가 새고 있나요?</span>
+        </div>
+      </div>
+      <div class="step-row step-2col" style="margin-bottom: 0;">
+        <div class="card">
+          <div class="card-title">채널별 성과</div>
+          <div class="card-subtitle"><span id="ch-week-label">W32</span> 기준 · ROAS·매출은 광고 플랫폼 기여 기준</div>
+          <div style="overflow-x: auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>채널</th>
+                  <th class="right">방문수</th>
+                  <th class="right">광고비</th>
+                  <th class="right">기여 매출</th>
+                  <th class="right">ROAS</th>
+                  <th class="right">상태</th>
+                </tr>
+              </thead>
+              <tbody id="channel-table"><tr><td><span class="dot" style="display:inline-block;margin-right:8px;background:#3B82F6"></span><span class="channel-name">DIRECT</span></td><td class="right">621</td><td class="right" style="color:var(--text-2)">-</td><td class="right">-</td><td class="right"><span style="color:var(--text-3)">-</span></td><td class="right"><span class="badge badge-neutral">중립</span></td></tr><tr><td><span class="dot" style="display:inline-block;margin-right:8px;background:#60A5FA"></span><span class="channel-name">META</span></td><td class="right">363</td><td class="right" style="color:var(--text-2)">₩51.7만</td><td class="right">-</td><td class="right"><span class="badge badge-bad">0%</span></td><td class="right"><span class="badge badge-bad">위험</span></td></tr><tr><td><span class="dot" style="display:inline-block;margin-right:8px;background:#34D399"></span><span class="channel-name">GOOGLE</span></td><td class="right">359</td><td class="right" style="color:var(--text-2)">₩8.1만</td><td class="right">-</td><td class="right"><span class="badge badge-bad">0%</span></td><td class="right"><span class="badge badge-bad">위험</span></td></tr><tr><td><span class="dot" style="display:inline-block;margin-right:8px;background:#A78BFA"></span><span class="channel-name">네이버</span></td><td class="right">285</td><td class="right" style="color:var(--text-2)">₩32.7만</td><td class="right">-</td><td class="right"><span class="badge badge-bad">0%</span></td><td class="right"><span class="badge badge-bad">위험</span></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">자동 인사이트</div>
+          <div class="card-subtitle">시급도 순 · 권장 액션 포함</div>
+          <div class="insights" id="insights"><div class="insight"><div class="insight-icon icon-bad">!</div><div style="flex:1"><div class="insight-text">매출 -74% 급락 — 광고비(-25%) 변동 연동</div><div class="insight-action">광고비 회복 또는 전환율 개선 시급</div></div></div><div class="insight"><div class="insight-icon icon-bad">!</div><div style="flex:1"><div class="insight-text">META ROAS 0% — 효율 붕괴, 광고비 ₩51.7만 회수 불가</div><div class="insight-action">광고 일시 중단 + 캠페인 재검토</div></div></div><div class="insight"><div class="insight-icon icon-bad">!</div><div style="flex:1"><div class="insight-text">GOOGLE ROAS 0% — 효율 붕괴, 광고비 ₩8.1만 회수 불가</div><div class="insight-action">광고 일시 중단 + 캠페인 재검토</div></div></div><div class="insight"><div class="insight-icon icon-bad">!</div><div style="flex:1"><div class="insight-text">네이버 ROAS 0% — 효율 붕괴, 광고비 ₩32.7만 회수 불가</div><div class="insight-action">광고 일시 중단 + 캠페인 재검토</div></div></div><div class="insight"><div class="insight-icon icon-bad">!</div><div style="flex:1"><div class="insight-text">퍼널 누수 — "장바구니 → 구매" 전환율 0.0%, 이탈 18명</div><div class="insight-action">결제 UX — 배송비, 비회원결제</div></div></div><div class="insight"><div class="insight-icon icon-warn">!</div><div style="flex:1"><div class="insight-text">방문수 -34% 급감</div><div class="insight-action">광고 노출량 / PR / 신규 콘텐츠 점검</div></div></div><div class="insight"><div class="insight-icon icon-warn">!</div><div style="flex:1"><div class="insight-text">객단가 ₩16.7만 → ₩6.8만 (-59%) 하락</div><div class="insight-action">할인/저가 의존 점검</div></div></div><div class="insight"><div class="insight-icon icon-warn">!</div><div style="flex:1"><div class="insight-text">직접유입 0% — 브랜드 인지도 부족</div><div class="insight-action">PR/브랜딩 강화 필요</div></div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Funnel (weekly comparison) -->
+  <div class="step-row step-2col">
+    <div class="dark-card">
+      <div class="dc-title">전환 퍼널 — <span id="funnel-week">W32</span><span id="funnel-compare" style="font-weight:500; color:var(--text-3); font-size:12px;">  (vs W31)</span></div>
+      <div class="dc-sub">사이트 접속 → 상품 조회 → 장바구니 → 구매 완료 (GA4 기준) · 전주 대비 변화 표시</div>
+      <div id="funnel-container" style="margin-top: 6px;"><div class="funnel-step"><div class="funnel-step-label"><div class="funnel-step-title">단계 1: 사이트 접속</div><div class="funnel-step-sub">전체의 100.0%</div></div><div class="funnel-bar-wrap"><div class="funnel-bar-fill" style="width:100%"><span class="funnel-bar-text">1,177명</span></div></div><div class="funnel-step-value"><div class="funnel-value-num">1,177</div><div class="funnel-value-pct">100.0%</div></div></div><div class="funnel-arrow"><span class="funnel-rate rate-ok">전환 33.1%</span><span style="color:var(--good); font-weight:700; font-size:10.5px;">▲ 1.4p</span><span class="funnel-leak">이탈 788명 (66.9%)</span><div class="funnel-arrow-line"></div><span class="funnel-bench">벤치마크 40~60%</span></div><div class="funnel-step"><div class="funnel-step-label"><div class="funnel-step-title">단계 2: 상품 조회</div><div class="funnel-step-sub">전체의 33.1%</div></div><div class="funnel-bar-wrap"><div class="funnel-bar-fill" style="width:33.050127442650805%"><span class="funnel-bar-text">389명</span></div></div><div class="funnel-step-value"><div class="funnel-value-num">389</div><div class="funnel-value-pct">33.1%</div></div></div><div class="funnel-arrow"><span class="funnel-rate rate-ok">전환 4.6%</span><span style="color:var(--good); font-weight:700; font-size:10.5px;">▲ 2.8p</span><span class="funnel-leak">이탈 371명 (95.4%)</span><div class="funnel-arrow-line"></div><span class="funnel-bench">벤치마크 5~10%</span></div><div class="funnel-step"><div class="funnel-step-label"><div class="funnel-step-title">단계 3: 장바구니 담기</div><div class="funnel-step-sub">전체의 1.5%</div></div><div class="funnel-bar-wrap"><div class="funnel-bar-fill" style="width:3%"><span class="funnel-bar-text">18명</span></div></div><div class="funnel-step-value"><div class="funnel-value-num">18</div><div class="funnel-value-pct">1.5%</div></div></div><div class="funnel-arrow"><span class="funnel-rate rate-bad">전환 0.0%</span><span style="color:var(--text-3); font-size:10.5px;">— 0.0p</span><span class="funnel-leak">이탈 18명 (100.0%)</span><div class="funnel-arrow-line"></div><span class="funnel-bench">벤치마크 30~50%</span></div><div class="funnel-step"><div class="funnel-step-label"><div class="funnel-step-title">단계 4: 구매 완료</div><div class="funnel-step-sub">전체의 0.0%</div></div><div class="funnel-bar-wrap"><div class="funnel-bar-fill" style="width:3%"><span class="funnel-bar-text">0명</span></div></div><div class="funnel-step-value"><div class="funnel-value-num">0</div><div class="funnel-value-pct">0.0%</div></div></div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">단계별 전환율 추이</div>
+      <div class="card-subtitle">주차별 전환율 비교 (%)</div>
+      <div class="chart-wrap-md"><canvas id="chart-funnel-trend" style="box-sizing: border-box; display: block; height: 215px; width: 670px;" width="670" height="215"></canvas></div>
+    </div>
+  </div>
+
+  <!-- STEP 4: 유입 플랫폼 x 유형 -->
+  <div class="step-row">
+    <div class="step-head">
+      <span class="step-num">STEP 4</span>
+      <div class="step-titles">
+        <span class="step-title">유입 플랫폼 × 유형 분석</span>
+        <span class="step-desc">— 어디서, 어떻게 들어와서 매출로 이어지나요?</span>
+      </div>
+    </div>
+    <div class="step-row step-2col" style="margin-bottom: 14px;">
+      <div class="card">
+        <div class="card-title">채널별 유입 현황</div>
+        <div class="card-subtitle">플랫폼 기준 · 막대 = 방문수, 우측 = 기여 매출</div>
+        <div id="traffic-platform" style="margin-top: 4px;"><div class="traffic-row"><div class="traffic-line"><span class="traffic-name">DIRECT</span><span class="traffic-meta">621 방문 · 매출 -</span></div><div class="bar-bg"><div class="bar-fill" style="width:100%; background:#3B82F6"></div></div></div><div class="traffic-row"><div class="traffic-line"><span class="traffic-name">GOOGLE</span><span class="traffic-meta">296 방문 · 매출 -</span></div><div class="bar-bg"><div class="bar-fill" style="width:47.66505636070853%; background:#60A5FA"></div></div></div><div class="traffic-row"><div class="traffic-line"><span class="traffic-name">네이버</span><span class="traffic-meta">285 방문 · 매출 -</span></div><div class="bar-bg"><div class="bar-fill" style="width:45.893719806763286%; background:#34D399"></div></div></div><div class="traffic-row"><div class="traffic-line"><span class="traffic-name">META</span><span class="traffic-meta">253 방문 · 매출 -</span></div><div class="bar-bg"><div class="bar-fill" style="width:40.74074074074074%; background:#A78BFA"></div></div></div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">유형별 유입 현황</div>
+        <div class="card-subtitle">유입 유형 기준 · 막대 = 방문수, 우측 = 기여 매출</div>
+        <div id="traffic-type" style="margin-top: 4px;"><div class="traffic-row"><div class="traffic-line"><span class="traffic-name">직접 유입</span><span class="traffic-meta">621 방문 · 매출 -</span></div><div class="bar-bg"><div class="bar-fill" style="width:100%; background:#3B82F6"></div></div></div><div class="traffic-row"><div class="traffic-line"><span class="traffic-name">유료 검색</span><span class="traffic-meta">581 방문 · 매출 -</span></div><div class="bar-bg"><div class="bar-fill" style="width:93.55877616747182%; background:#60A5FA"></div></div></div><div class="traffic-row"><div class="traffic-line"><span class="traffic-name">유료 소셜</span><span class="traffic-meta">253 방문 · 매출 -</span></div><div class="bar-bg"><div class="bar-fill" style="width:40.74074074074074%; background:#34D399"></div></div></div></div>
+      </div>
+    </div>
+    <div class="step-row step-2col" style="margin-bottom: 14px;">
+      <div class="card">
+        <div class="card-title">혼합 현황 TOP 5</div>
+        <div class="card-subtitle">유형 × 플랫폼 조합 · 매출 기준 상위 5개</div>
+        <div id="traffic-mix" style="margin-top: 4px;"><div class="mix-row"><div class="mix-rank r1">1</div><div class="mix-body"><div class="mix-line"><span class="mix-name">직접 유입<span class="mix-x">×</span>DIRECT</span><span class="mix-rev">매출 - </span></div><div class="bar-bg"><div class="bar-fill" style="width:2%; background:#C8A567"></div></div><div class="mix-meta">방문 <b>621</b> · 주문 <b>0</b> · 방문당 매출 <b>₩0</b> · 전환율 <b>0.0%</b></div></div></div><div class="mix-row"><div class="mix-rank r2">2</div><div class="mix-body"><div class="mix-line"><span class="mix-name">유료 검색<span class="mix-x">×</span>GOOGLE</span><span class="mix-rev">매출 - </span></div><div class="bar-bg"><div class="bar-fill" style="width:2%; background:#34D399"></div></div><div class="mix-meta">방문 <b>296</b> · 주문 <b>0</b> · 방문당 매출 <b>₩0</b> · 전환율 <b>0.0%</b></div></div></div><div class="mix-row"><div class="mix-rank r3">3</div><div class="mix-body"><div class="mix-line"><span class="mix-name">유료 검색<span class="mix-x">×</span>네이버</span><span class="mix-rev">매출 - </span></div><div class="bar-bg"><div class="bar-fill" style="width:2%; background:#A78BFA"></div></div><div class="mix-meta">방문 <b>285</b> · 주문 <b>0</b> · 방문당 매출 <b>₩0</b> · 전환율 <b>0.0%</b></div></div></div><div class="mix-row"><div class="mix-rank ">4</div><div class="mix-body"><div class="mix-line"><span class="mix-name">유료 소셜<span class="mix-x">×</span>META</span><span class="mix-rev">매출 - </span></div><div class="bar-bg"><div class="bar-fill" style="width:2%; background:#F472B6"></div></div><div class="mix-meta">방문 <b>253</b> · 주문 <b>0</b> · 방문당 매출 <b>₩0</b> · 전환율 <b>0.0%</b></div></div></div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">메타 소재 현황 TOP 5</div>
+        <div class="card-subtitle">소재 단위 성과 · 매출 기준 상위 5개</div>
+        <div id="meta-creatives" style="margin-top: 4px;"><div style="color:var(--text-3); font-size:12px; padding:10px;">데이터 없음 — 데이터 업데이트에서 메타 소재를 입력하세요</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">월별 유입 누계</div>
+      <div class="card-subtitle">trafficHistory 기반 월 자동 집계 · 상위 플랫폼/유형 표시</div>
+      <div style="overflow-x:auto; max-height:320px; overflow-y:auto;">
+        <table class="monthly-table">
+          <thead><tr>
+            <th>월</th>
+            <th class="right">총 방문</th>
+            <th class="right">기여 매출</th>
+            <th class="right">주문</th>
+            <th class="right">방문당 매출</th>
+            <th>TOP 플랫폼</th>
+            <th>TOP 유형</th>
+          </tr></thead>
+          <tbody id="traffic-monthly-table"><tr><td colspan="7" style="padding:10px 10px 5px;font-size:11px;font-weight:800;color:var(--text-3);letter-spacing:0.08em;text-transform:uppercase;border-bottom:2px solid var(--border-strong);background:var(--surface-2);">2026년</td></tr><tr><td><span class="month-badge">2026-05</span></td><td class="right">5,514</td><td class="right" style="font-weight:700;color:var(--text)">₩607.8만</td><td class="right">25</td><td class="right">₩1,102</td><td><span class="badge badge-neutral">DIRECT</span></td><td><span class="badge badge-neutral">직접 유입</span></td></tr><tr><td><span class="month-badge">2026-06</span></td><td class="right">11,488</td><td class="right" style="font-weight:700;color:var(--text)">₩754.2만</td><td class="right">39</td><td class="right">₩656</td><td><span class="badge badge-neutral">DIRECT</span></td><td><span class="badge badge-neutral">직접 유입</span></td></tr><tr><td><span class="month-badge">2026-07</span></td><td class="right">16,804</td><td class="right" style="font-weight:700;color:var(--text)">₩980.5만</td><td class="right">79</td><td class="right">₩584</td><td><span class="badge badge-neutral">DIRECT</span></td><td><span class="badge badge-neutral">직접 유입</span></td></tr><tr><td><span class="month-badge">2026-08</span></td><td class="right">1,455</td><td class="right" style="color:var(--text-3)">₩0</td><td class="right">0</td><td class="right">-</td><td><span class="badge badge-neutral">DIRECT</span></td><td><span class="badge badge-neutral">직접 유입</span></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Brand + Products -->
+  <div class="step-row step-2col">
+    <div class="card">
+      <div class="card-title">브랜드 검색량 추이</div>
+      <div class="card-subtitle">네이버 데이터랩 "테일던" 검색량 · PR 효과 측정</div>
+      <div class="chart-wrap-sm"><canvas id="chart-brand" style="box-sizing: border-box; display: block; height: 170px; width: 1096px;" width="1096" height="170"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">상위 상품 매출</div>
+      <div class="card-subtitle">이번 주 베스트셀러</div>
+      <div id="products" style="margin-top: 6px;"><div class="product-row"><div class="product-line"><span class="product-name"></span><span class="product-revenue">₩0</span></div><div class="bar-bg"><div class="bar-fill" style="width:0%; background:#3B82F6"></div></div></div><div class="product-row"><div class="product-line"><span class="product-name"></span><span class="product-revenue">₩0</span></div><div class="bar-bg"><div class="bar-fill" style="width:0%; background:#60A5FA"></div></div></div><div class="product-row"><div class="product-line"><span class="product-name"></span><span class="product-revenue">₩0</span></div><div class="bar-bg"><div class="bar-fill" style="width:0%; background:#34D399"></div></div></div><div class="product-row"><div class="product-line"><span class="product-name"></span><span class="product-revenue">₩0</span></div><div class="bar-bg"><div class="bar-fill" style="width:0%; background:#A78BFA"></div></div></div><div class="product-row"><div class="product-line"><span class="product-name"></span><span class="product-revenue">₩0</span></div><div class="bar-bg"><div class="bar-fill" style="width:0%; background:#F472B6"></div></div></div></div>
+    </div>
+  </div>
+
+  <div class="footer">데이터는 브라우저에 자동 저장됩니다. 백업 버튼으로 JSON 파일을 받아 보관하세요.</div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">데이터 업데이트</div>
+        <div class="modal-subtitle">GA4 / 광고매니저에서 숫자 복사해서 입력</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-section">
+        <h3><span>주차별 핵심 지표</span><button class="form-add-btn" onclick="addWeek()">+ 주차 추가</button></h3>
+        <div style="overflow-x: auto;">
+          <table class="form-table">
+            <thead><tr style="font-size: 11px; color: var(--text-3); border-bottom: 1px solid var(--border);">
+              <th>주차</th><th>월</th><th>방문수</th><th>신규방문</th><th>매출</th><th>주문수</th><th>광고비</th><th>CVR</th><th></th>
+            </tr></thead>
+            <tbody id="form-weeks"><tr><td><input class="form-input" style="width:72px" value="W18" onchange="updateWeek(0,'week',this.value)"></td><td><input class="form-input" style="width:90px" value="2026-05" placeholder="2025-06" onchange="updateWeek(0,'month',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="1480" onchange="updateWeek(0,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="920" onchange="updateWeek(0,'newUsers',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="850000" onchange="updateWeek(0,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:65px" value="5" onchange="updateWeek(0,'orders',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="920000" onchange="updateWeek(0,'adSpend',this.value)"></td><td><input type="number" step="0.0001" class="form-input right" style="width:78px" value="0.0185" onchange="updateWeek(0,'cvr',this.value)"></td><td><button class="row-delete" onclick="removeWeek(0)">×</button></td></tr><tr><td><input class="form-input" style="width:72px" value="W19" onchange="updateWeek(1,'week',this.value)"></td><td><input class="form-input" style="width:90px" value="2026-05" placeholder="2025-06" onchange="updateWeek(1,'month',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="1395" onchange="updateWeek(1,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="845" onchange="updateWeek(1,'newUsers',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="1120000" onchange="updateWeek(1,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:65px" value="7" onchange="updateWeek(1,'orders',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="845000" onchange="updateWeek(1,'adSpend',this.value)"></td><td><input type="number" step="0.0001" class="form-input right" style="width:78px" value="0.0195" onchange="updateWeek(1,'cvr',this.value)"></td><td><button class="row-delete" onclick="removeWeek(1)">×</button></td></tr><tr><td><input class="form-input" style="width:72px" value="W20" onchange="updateWeek(2,'week',this.value)"></td><td><input class="form-input" style="width:90px" value="2026-05" placeholder="2025-06" onchange="updateWeek(2,'month',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="1420" onchange="updateWeek(2,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="870" onchange="updateWeek(2,'newUsers',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="980000" onchange="updateWeek(2,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:65px" value="6" onchange="updateWeek(2,'orders',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="815000" onchange="updateWeek(2,'adSpend',this.value)"></td><td><input type="number" step="0.0001" class="form-input right" style="width:78px" value="0.0188" onchange="updateWeek(2,'cvr',this.value)"></td><td><button class="row-delete" onclick="removeWeek(2)">×</button></td></tr><tr><td><input class="form-input" style="width:72px" value="W21" onchange="updateWeek(3,'week',this.value)"></td><td><input class="form-input" style="width:90px" value="2026-05" placeholder="2025-06" onchange="updateWeek(3,'month',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="1325" onchange="updateWeek(3,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="791" onchange="updateWeek(3,'newUsers',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="1860700" onchange="updateWeek(3,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:65px" value="9" onchange="updateWeek(3,'orders',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="789585" onchange="updateWeek(3,'adSpend',this.value)"></td><td><input type="number" step="0.0001" class="form-input right" style="width:78px" value="0.0207" onchange="updateWeek(3,'cvr',this.value)"></td><td><button class="row-delete" onclick="removeWeek(3)">×</button></td></tr><tr><td><input class="form-input" style="width:72px" value="W22" onchange="updateWeek(4,'week',this.value)"></td><td><input class="form-input" style="width:90px" value="2026-06" placeholder="2025-06" onchange="updateWeek(4,'month',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="1009" onchange="updateWeek(4,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="598" onchange="updateWeek(4,'newUsers',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="272873" onchange="updateWeek(4,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:65px" value="3" onchange="updateWeek(4,'orders',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="561336" onchange="updateWeek(4,'adSpend',this.value)"></td><td><input type="number" step="0.0001" class="form-input right" style="width:78px" value="0.0209" onchange="updateWeek(4,'cvr',this.value)"></td><td><button class="row-delete" onclick="removeWeek(4)">×</button></td></tr><tr><td><input class="form-input" style="width:72px" value="W23" onchange="updateWeek(5,'week',this.value)"></td><td><input class="form-input" style="width:90px" value="2026-06" placeholder="2025-06" onchange="updateWeek(5,'month',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="753" onchange="updateWeek(5,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="297" onchange="updateWeek(5,'newUsers',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="729500" onchange="updateWeek(5,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:65px" value="9" onchange="updateWeek(5,'orders',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="453479" onchange="updateWeek(5,'adSpend',this.value)"></td><td><input type="number" step="0.0001" class="form-input right" style="width:78px" value="0" onchange="updateWeek(5,'cvr',this.value)"></td><td><button class="row-delete" onclick="removeWeek(5)">×</button></td></tr><tr><td><input class="form-input" style="width:72px" value="W24" onchange="updateWeek(6,'week',this.value)"></td><td><input class="form-input" style="width:90px" value="2026-06" placeholder="2025-06" onchange="updateWeek(6,'month',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="4747" onchange="updateWeek(6,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="4370" onchange="updateWeek(6,'newUsers',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="972300" onchange="updateWeek(6,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:65px" value="11" onchange="updateWeek(6,'orders',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="2695665" onchange="updateWeek(6,'adSpend',this.value)"></td><td><input type="number" step="0.0001" class="form-input right" style="width:78px" value="0.005" onchange="updateWeek(6,'cvr',this.value)"></td><td><button class="row-delete" onclick="removeWeek(6)">×</button></td></tr><tr><td><input class="form-input" style="width:72px" value="W25" onchange="updateWeek(7,'week',this.value)"></td><td><input class="form-input" style="width:90px" value="2026-06" placeholder="2025-06" onchange="updateWeek(7,'month',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="3788" onchange="updateWeek(7,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="3363" onchange="updateWeek(7,'newUsers',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="1452750" onchange="updateWeek(7,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:65px" value="15" onchange="updateWeek(7,'orders',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="3046113" onchange="updateWeek(7,'adSpend',this.value)"></td><td><input type="number" step="0.0001" class="form-input right" style="width:78px" value="0.007" onchange="updateWeek(7,'cvr',this.value)"></td><td><button class="row-delete" onclick="removeWeek(7)">×</button></td></tr><tr><td><input class="form-input" style="width:72px" value="W26" onchange="updateWeek(8,'week',this.value)"></td><td><input class="form-input" style="width:90px" value="2026-06" placeholder="2025-06" onchange="updateWeek(8,'month',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="2582" onchange="updateWeek(8,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="2234" onchange="updateWeek(8,'newUsers',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="2538820" onchange="updateWeek(8,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:65px" value="21" onchange="updateWeek(8,'orders',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="1974186" onchange="updateWeek(8,'adSpend',this.value)"></td><td><input type="number" step="0.0001" class="form-input right" style="width:78px" value="0.0097" onchange="updateWeek(8,'cvr',this.value)"></td><td><button class="row-delete" onclick="removeWeek(8)">×</button></td></tr><tr><td><input class="form-input" style="width:72px" value="W27" onchange="updateWeek(9,'week',this.value)"></td><td><input class="form-input" style="width:90px" value="2026-07" placeholder="2025-06" onchange="updateWeek(9,'month',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="4232" onchange="updateWeek(9,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="3865" onchange="updateWeek(9,'newUsers',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="2449099" onchange="updateWeek(9,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:65px" value="24" onchange="updateWeek(9,'orders',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="1922168" onchange="updateWeek(9,'adSpend',this.value)"></td><td><input type="number" step="0.0001" class="form-input right" style="width:78px" value="0.0041" onchange="updateWeek(9,'cvr',this.value)"></td><td><button class="row-delete" onclick="removeWeek(9)">×</button></td></tr><tr><td><input class="form-input" style="width:72px" value="W28" onchange="updateWeek(10,'week',this.value)"></td><td><input class="form-input" style="width:90px" value="2026-07" placeholder="2025-06" onchange="updateWeek(10,'month',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="4251" onchange="updateWeek(10,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="3788" onchange="updateWeek(10,'newUsers',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="1581970" onchange="updateWeek(10,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:65px" value="13" onchange="updateWeek(10,'orders',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="1475376" onchange="updateWeek(10,'adSpend',this.value)"></td><td><input type="number" step="0.0001" class="form-input right" style="width:78px" value="0.0029" onchange="updateWeek(10,'cvr',this.value)"></td><td><button class="row-delete" onclick="removeWeek(10)">×</button></td></tr><tr><td><input class="form-input" style="width:72px" value="W29" onchange="updateWeek(11,'week',this.value)"></td><td><input class="form-input" style="width:90px" value="2026-07" placeholder="2025-06" onchange="updateWeek(11,'month',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="1562" onchange="updateWeek(11,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="1146" onchange="updateWeek(11,'newUsers',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="369366" onchange="updateWeek(11,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:65px" value="5" onchange="updateWeek(11,'orders',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="746277" onchange="updateWeek(11,'adSpend',this.value)"></td><td><input type="number" step="0.0001" class="form-input right" style="width:78px" value="0.0215" onchange="updateWeek(11,'cvr',this.value)"></td><td><button class="row-delete" onclick="removeWeek(11)">×</button></td></tr><tr><td><input class="form-input" style="width:72px" value="W30" onchange="updateWeek(12,'week',this.value)"></td><td><input class="form-input" style="width:90px" value="2026-07" placeholder="2025-06" onchange="updateWeek(12,'month',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="5005" onchange="updateWeek(12,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="4010" onchange="updateWeek(12,'newUsers',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="2877300" onchange="updateWeek(12,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:65px" value="41" onchange="updateWeek(12,'orders',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="1172282" onchange="updateWeek(12,'adSpend',this.value)"></td><td><input type="number" step="0.0001" class="form-input right" style="width:78px" value="0.0066" onchange="updateWeek(12,'cvr',this.value)"></td><td><button class="row-delete" onclick="removeWeek(12)">×</button></td></tr><tr><td><input class="form-input" style="width:72px" value="W31" onchange="updateWeek(13,'week',this.value)"></td><td><input class="form-input" style="width:90px" value="2026-07" placeholder="2025-06" onchange="updateWeek(13,'month',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="2528" onchange="updateWeek(13,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="1893" onchange="updateWeek(13,'newUsers',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="1333700" onchange="updateWeek(13,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:65px" value="8" onchange="updateWeek(13,'orders',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="1236227" onchange="updateWeek(13,'adSpend',this.value)"></td><td><input type="number" step="0.0001" class="form-input right" style="width:78px" value="0.0066" onchange="updateWeek(13,'cvr',this.value)"></td><td><button class="row-delete" onclick="removeWeek(13)">×</button></td></tr><tr><td><input class="form-input" style="width:72px" value="W32" onchange="updateWeek(14,'week',this.value)"></td><td><input class="form-input" style="width:90px" value="2026-08" placeholder="2025-06" onchange="updateWeek(14,'month',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="1657" onchange="updateWeek(14,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:88px" value="1107" onchange="updateWeek(14,'newUsers',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="341497" onchange="updateWeek(14,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:65px" value="5" onchange="updateWeek(14,'orders',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="924867" onchange="updateWeek(14,'adSpend',this.value)"></td><td><input type="number" step="0.0001" class="form-input right" style="width:78px" value="0.004" onchange="updateWeek(14,'cvr',this.value)"></td><td><button class="row-delete" onclick="removeWeek(14)">×</button></td></tr></tbody>
+          </table>
+        </div>
+        <div class="form-hint">※ 월: YYYY-MM 형식 (예: 2025-06) · CVR 소수 (예: 2.09% → 0.0209)</div>
+      </div>
+
+      <div class="form-section">
+        <h3>
+          <span>채널별 성과</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <select id="form-ch-week" class="form-input" style="font-size:12px;" onchange="loadFormChannelWeek(this.value)"><option value="W18">W18</option><option value="W19">W19</option><option value="W20">W20</option><option value="W21">W21</option><option value="W22">W22</option><option value="W23">W23</option><option value="W24">W24</option><option value="W25">W25</option><option value="W26">W26</option><option value="W27">W27</option><option value="W28">W28</option><option value="W29">W29</option><option value="W30">W30</option><option value="W31">W31</option><option value="W32" selected="">W32</option></select>
+            <button class="form-add-btn" onclick="addChannel()">+ 채널 추가</button>
+          </div>
+        </h3>
+        <div style="overflow-x: auto;">
+          <table class="form-table">
+            <thead><tr style="font-size: 11px; color: var(--text-3); border-bottom: 1px solid var(--border);">
+              <th>채널명</th><th>방문수</th><th>비중</th><th>광고비</th><th>매출</th><th>주문수</th><th>ROAS (자동)</th><th>상태 (자동)</th><th></th>
+            </tr></thead>
+            <tbody id="form-channels"><tr><td><input class="form-input" style="width:110px" value="DIRECT" onchange="updateChannel(0,'name',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:88px" value="621" onchange="updateChannel(0,'sessions',this.value)"></td><td><input type="number" step="0.001" class="form-input right" style="width:78px" value="0.0037" onchange="updateChannel(0,'share',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="0" onchange="updateChannel(0,'adSpend',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="0" onchange="updateChannel(0,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:65px" value="0" onchange="updateChannel(0,'orders',this.value)"></td><td class="right"><span class="badge badge-neutral">-</span></td><td class="right"><span class="badge badge-neutral">중립</span></td><td><button class="row-delete" onclick="removeChannel(0)">×</button></td></tr><tr><td><input class="form-input" style="width:110px" value="META" onchange="updateChannel(1,'name',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:88px" value="363" onchange="updateChannel(1,'sessions',this.value)"></td><td><input type="number" step="0.001" class="form-input right" style="width:78px" value="0.0022" onchange="updateChannel(1,'share',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="517041" onchange="updateChannel(1,'adSpend',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="0" onchange="updateChannel(1,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:65px" value="1" onchange="updateChannel(1,'orders',this.value)"></td><td class="right"><span class="badge badge-bad">0%</span></td><td class="right"><span class="badge badge-bad">위험</span></td><td><button class="row-delete" onclick="removeChannel(1)">×</button></td></tr><tr><td><input class="form-input" style="width:110px" value="GOOGLE" onchange="updateChannel(2,'name',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:88px" value="359" onchange="updateChannel(2,'sessions',this.value)"></td><td><input type="number" step="0.001" class="form-input right" style="width:78px" value="0.0022" onchange="updateChannel(2,'share',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="81157" onchange="updateChannel(2,'adSpend',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="0" onchange="updateChannel(2,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:65px" value="0" onchange="updateChannel(2,'orders',this.value)"></td><td class="right"><span class="badge badge-bad">0%</span></td><td class="right"><span class="badge badge-bad">위험</span></td><td><button class="row-delete" onclick="removeChannel(2)">×</button></td></tr><tr><td><input class="form-input" style="width:110px" value="네이버" onchange="updateChannel(3,'name',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:88px" value="285" onchange="updateChannel(3,'sessions',this.value)"></td><td><input type="number" step="0.001" class="form-input right" style="width:78px" value="0.0017" onchange="updateChannel(3,'share',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="326669" onchange="updateChannel(3,'adSpend',this.value)"></td><td><input type="number" class="form-input right" style="width:105px" value="0" onchange="updateChannel(3,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:65px" value="0" onchange="updateChannel(3,'orders',this.value)"></td><td class="right"><span class="badge badge-bad">0%</span></td><td class="right"><span class="badge badge-bad">위험</span></td><td><button class="row-delete" onclick="removeChannel(3)">×</button></td></tr></tbody>
+          </table>
+        </div>
+        <div class="form-hint">※ 비중은 소수 (예: 23.2% → 0.232) · ROAS·상태는 매출÷광고비 기준으로 자동 계산돼요 (입력 불필요)</div>
+      </div>
+
+      <div class="form-section">
+        <h3><span>전환 퍼널 (주차별)</span><button class="form-add-btn" onclick="addFunnelWeek()">+ 주차 추가</button></h3>
+        <div style="overflow-x: auto;">
+          <table class="form-table">
+            <thead><tr style="font-size: 11px; color: var(--text-3); border-bottom: 1px solid var(--border);"><th>주차</th><th>사이트 접속</th><th>상품 조회</th><th>장바구니</th><th>구매 완료</th><th></th></tr></thead>
+            <tbody id="form-funnel"><tr><td><input class="form-input" style="width:80px" value="W20" onchange="updateFunnelHist(0,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="1218" onchange="updateFunnelHist(0,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="693" onchange="updateFunnelHist(0,'productViews',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="18" onchange="updateFunnelHist(0,'addToCarts',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="6" onchange="updateFunnelHist(0,'purchases',this.value)"></td><td><button class="row-delete" onclick="removeFunnelWeek(0)">×</button></td></tr><tr><td><input class="form-input" style="width:80px" value="W21" onchange="updateFunnelHist(1,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="838" onchange="updateFunnelHist(1,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="406" onchange="updateFunnelHist(1,'productViews',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="11" onchange="updateFunnelHist(1,'addToCarts',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="4" onchange="updateFunnelHist(1,'purchases',this.value)"></td><td><button class="row-delete" onclick="removeFunnelWeek(1)">×</button></td></tr><tr><td><input class="form-input" style="width:80px" value="W22" onchange="updateFunnelHist(2,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="646" onchange="updateFunnelHist(2,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="319" onchange="updateFunnelHist(2,'productViews',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="8" onchange="updateFunnelHist(2,'addToCarts',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="1" onchange="updateFunnelHist(2,'purchases',this.value)"></td><td><button class="row-delete" onclick="removeFunnelWeek(2)">×</button></td></tr><tr><td><input class="form-input" style="width:80px" value="W23" onchange="updateFunnelHist(3,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="331" onchange="updateFunnelHist(3,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="157" onchange="updateFunnelHist(3,'productViews',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="6" onchange="updateFunnelHist(3,'addToCarts',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="4" onchange="updateFunnelHist(3,'purchases',this.value)"></td><td><button class="row-delete" onclick="removeFunnelWeek(3)">×</button></td></tr><tr><td><input class="form-input" style="width:80px" value="W24" onchange="updateFunnelHist(4,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="3890" onchange="updateFunnelHist(4,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="1003" onchange="updateFunnelHist(4,'productViews',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="14" onchange="updateFunnelHist(4,'addToCarts',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="1" onchange="updateFunnelHist(4,'purchases',this.value)"></td><td><button class="row-delete" onclick="removeFunnelWeek(4)">×</button></td></tr><tr><td><input class="form-input" style="width:80px" value="W25" onchange="updateFunnelHist(5,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="3062" onchange="updateFunnelHist(5,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="1144" onchange="updateFunnelHist(5,'productViews',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="17" onchange="updateFunnelHist(5,'addToCarts',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="3" onchange="updateFunnelHist(5,'purchases',this.value)"></td><td><button class="row-delete" onclick="removeFunnelWeek(5)">×</button></td></tr><tr><td><input class="form-input" style="width:80px" value="W26" onchange="updateFunnelHist(6,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="2015" onchange="updateFunnelHist(6,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="1047" onchange="updateFunnelHist(6,'productViews',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="9" onchange="updateFunnelHist(6,'addToCarts',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="2" onchange="updateFunnelHist(6,'purchases',this.value)"></td><td><button class="row-delete" onclick="removeFunnelWeek(6)">×</button></td></tr><tr><td><input class="form-input" style="width:80px" value="W27" onchange="updateFunnelHist(7,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="3428" onchange="updateFunnelHist(7,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="1435" onchange="updateFunnelHist(7,'productViews',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="12" onchange="updateFunnelHist(7,'addToCarts',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="5" onchange="updateFunnelHist(7,'purchases',this.value)"></td><td><button class="row-delete" onclick="removeFunnelWeek(7)">×</button></td></tr><tr><td><input class="form-input" style="width:80px" value="W28" onchange="updateFunnelHist(8,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="3438" onchange="updateFunnelHist(8,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="1281" onchange="updateFunnelHist(8,'productViews',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="20" onchange="updateFunnelHist(8,'addToCarts',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="2" onchange="updateFunnelHist(8,'purchases',this.value)"></td><td><button class="row-delete" onclick="removeFunnelWeek(8)">×</button></td></tr><tr><td><input class="form-input" style="width:80px" value="W29" onchange="updateFunnelHist(9,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="1203" onchange="updateFunnelHist(9,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="446" onchange="updateFunnelHist(9,'productViews',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="11" onchange="updateFunnelHist(9,'addToCarts',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="2" onchange="updateFunnelHist(9,'purchases',this.value)"></td><td><button class="row-delete" onclick="removeFunnelWeek(9)">×</button></td></tr><tr><td><input class="form-input" style="width:80px" value="W30" onchange="updateFunnelHist(10,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="3943" onchange="updateFunnelHist(10,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="1057" onchange="updateFunnelHist(10,'productViews',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="30" onchange="updateFunnelHist(10,'addToCarts',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="6" onchange="updateFunnelHist(10,'purchases',this.value)"></td><td><button class="row-delete" onclick="removeFunnelWeek(10)">×</button></td></tr><tr><td><input class="form-input" style="width:80px" value="W31" onchange="updateFunnelHist(11,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="1949" onchange="updateFunnelHist(11,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="617" onchange="updateFunnelHist(11,'productViews',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="11" onchange="updateFunnelHist(11,'addToCarts',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="0" onchange="updateFunnelHist(11,'purchases',this.value)"></td><td><button class="row-delete" onclick="removeFunnelWeek(11)">×</button></td></tr><tr><td><input class="form-input" style="width:80px" value="W32" onchange="updateFunnelHist(12,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="1177" onchange="updateFunnelHist(12,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="389" onchange="updateFunnelHist(12,'productViews',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="18" onchange="updateFunnelHist(12,'addToCarts',this.value)"></td><td><input type="number" class="form-input right" style="width:100px" value="0" onchange="updateFunnelHist(12,'purchases',this.value)"></td><td><button class="row-delete" onclick="removeFunnelWeek(12)">×</button></td></tr></tbody>
+          </table>
+        </div>
+        <div class="form-hint">※ GA4 → 탐색 → 유입경로 분석에서 각 단계 "활성 사용자"</div>
+      </div>
+
+      <div class="form-section">
+        <h3>
+          <span>유입 플랫폼 × 유형</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <select id="form-tr-week" class="form-input" style="font-size:12px;" onchange="loadFormTrafficWeek(this.value)"><option value="W18">W18</option><option value="W19">W19</option><option value="W20">W20</option><option value="W21">W21</option><option value="W22">W22</option><option value="W23">W23</option><option value="W24">W24</option><option value="W25">W25</option><option value="W26">W26</option><option value="W27">W27</option><option value="W28">W28</option><option value="W29">W29</option><option value="W30">W30</option><option value="W31">W31</option><option value="W32" selected="">W32</option></select>
+            <button class="form-add-btn" onclick="addTraffic()">+ 행 추가</button>
+          </div>
+        </h3>
+        <div style="overflow-x: auto;">
+          <table class="form-table">
+            <thead><tr style="font-size: 11px; color: var(--text-3); border-bottom: 1px solid var(--border);"><th>플랫폼</th><th>유형</th><th>방문수</th><th>매출</th><th>주문수</th><th></th></tr></thead>
+            <tbody id="form-traffic"><tr><td><input class="form-input" style="width:100px" value="DIRECT" onchange="updateTraffic(0,'platform',this.value,'string')"></td><td><select class="form-input" onchange="updateTraffic(0,'type',this.value,'string')"><option value="오가닉 검색">오가닉 검색</option><option value="유료 검색">유료 검색</option><option value="유료 소셜">유료 소셜</option><option value="오가닉 소셜">오가닉 소셜</option><option value="직접 유입" selected="">직접 유입</option><option value="추천(PR)">추천(PR)</option><option value="이메일">이메일</option><option value="기타">기타</option></select></td><td><input type="number" class="form-input right" style="width:90px" value="621" onchange="updateTraffic(0,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:110px" value="0" onchange="updateTraffic(0,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:70px" value="0" onchange="updateTraffic(0,'orders',this.value)"></td><td><button class="row-delete" onclick="removeTraffic(0)">×</button></td></tr><tr><td><input class="form-input" style="width:100px" value="META" onchange="updateTraffic(1,'platform',this.value,'string')"></td><td><select class="form-input" onchange="updateTraffic(1,'type',this.value,'string')"><option value="오가닉 검색">오가닉 검색</option><option value="유료 검색">유료 검색</option><option value="유료 소셜" selected="">유료 소셜</option><option value="오가닉 소셜">오가닉 소셜</option><option value="직접 유입">직접 유입</option><option value="추천(PR)">추천(PR)</option><option value="이메일">이메일</option><option value="기타">기타</option></select></td><td><input type="number" class="form-input right" style="width:90px" value="253" onchange="updateTraffic(1,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:110px" value="0" onchange="updateTraffic(1,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:70px" value="0" onchange="updateTraffic(1,'orders',this.value)"></td><td><button class="row-delete" onclick="removeTraffic(1)">×</button></td></tr><tr><td><input class="form-input" style="width:100px" value="GOOGLE" onchange="updateTraffic(2,'platform',this.value,'string')"></td><td><select class="form-input" onchange="updateTraffic(2,'type',this.value,'string')"><option value="오가닉 검색">오가닉 검색</option><option value="유료 검색" selected="">유료 검색</option><option value="유료 소셜">유료 소셜</option><option value="오가닉 소셜">오가닉 소셜</option><option value="직접 유입">직접 유입</option><option value="추천(PR)">추천(PR)</option><option value="이메일">이메일</option><option value="기타">기타</option></select></td><td><input type="number" class="form-input right" style="width:90px" value="296" onchange="updateTraffic(2,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:110px" value="0" onchange="updateTraffic(2,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:70px" value="0" onchange="updateTraffic(2,'orders',this.value)"></td><td><button class="row-delete" onclick="removeTraffic(2)">×</button></td></tr><tr><td><input class="form-input" style="width:100px" value="네이버" onchange="updateTraffic(3,'platform',this.value,'string')"></td><td><select class="form-input" onchange="updateTraffic(3,'type',this.value,'string')"><option value="오가닉 검색">오가닉 검색</option><option value="유료 검색" selected="">유료 검색</option><option value="유료 소셜">유료 소셜</option><option value="오가닉 소셜">오가닉 소셜</option><option value="직접 유입">직접 유입</option><option value="추천(PR)">추천(PR)</option><option value="이메일">이메일</option><option value="기타">기타</option></select></td><td><input type="number" class="form-input right" style="width:90px" value="285" onchange="updateTraffic(3,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:110px" value="0" onchange="updateTraffic(3,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:70px" value="0" onchange="updateTraffic(3,'orders',this.value)"></td><td><button class="row-delete" onclick="removeTraffic(3)">×</button></td></tr></tbody>
+          </table>
+        </div>
+        <div class="form-hint">※ GA4 source(플랫폼) × medium(유형) 조합으로 입력 · 플랫폼: 네이버/구글/메타/인스타그램/직접 등</div>
+      </div>
+
+      <div class="form-section">
+        <h3>
+          <span>메타 소재 현황</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <select id="form-cr-week" class="form-input" style="font-size:12px;" onchange="loadFormCreativeWeek(this.value)"><option value="W18">W18 (미입력)</option><option value="W19">W19 (미입력)</option><option value="W20">W20 (미입력)</option><option value="W21">W21 (미입력)</option><option value="W22">W22 (미입력)</option><option value="W23">W23 (미입력)</option><option value="W24">W24 (미입력)</option><option value="W25">W25 (미입력)</option><option value="W26">W26 (미입력)</option><option value="W27">W27</option><option value="W28">W28</option><option value="W29">W29</option><option value="W30">W30</option><option value="W31" selected="">W31</option><option value="W32">W32 (미입력)</option></select>
+            <button class="form-add-btn" onclick="addCreative()">+ 소재 추가</button>
+          </div>
+        </h3>
+        <div style="overflow-x: auto;">
+          <table class="form-table">
+            <thead><tr style="font-size: 11px; color: var(--text-3); border-bottom: 1px solid var(--border);">
+              <th>소재 제목</th><th>유입자 수</th><th>신규 유입</th><th>구매건수</th><th>매출</th><th>집행금액</th><th>CTR</th><th>ROAS (자동)</th><th></th>
+            </tr></thead>
+            <tbody id="form-creatives"><tr><td><input class="form-input" style="width:200px;text-align:left" value="taildern_pmax2" onchange="updateCreative(0,'name',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:90px" value="262" onchange="updateCreative(0,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:90px" value="215" onchange="updateCreative(0,'newUsers',this.value)"></td><td><input type="number" class="form-input right" style="width:80px" value="0" onchange="updateCreative(0,'orders',this.value)"></td><td><input type="number" class="form-input right" style="width:110px" value="0" onchange="updateCreative(0,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:110px" value="0" onchange="updateCreative(0,'adSpend',this.value)"></td><td><input type="number" step="0.1" class="form-input right" style="width:70px" value="0.0" onchange="updateCreative(0,'ctr',this.value,'pct')"></td><td class="right" style="color:var(--text-2);font-size:12px;">-</td><td><button class="row-delete" onclick="removeCreative(0)">×</button></td></tr><tr><td><input class="form-input" style="width:200px;text-align:left" value="taildern_traffic" onchange="updateCreative(1,'name',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:90px" value="103" onchange="updateCreative(1,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:90px" value="75" onchange="updateCreative(1,'newUsers',this.value)"></td><td><input type="number" class="form-input right" style="width:80px" value="0" onchange="updateCreative(1,'orders',this.value)"></td><td><input type="number" class="form-input right" style="width:110px" value="0" onchange="updateCreative(1,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:110px" value="0" onchange="updateCreative(1,'adSpend',this.value)"></td><td><input type="number" step="0.1" class="form-input right" style="width:70px" value="0.0" onchange="updateCreative(1,'ctr',this.value,'pct')"></td><td class="right" style="color:var(--text-2);font-size:12px;">-</td><td><button class="row-delete" onclick="removeCreative(1)">×</button></td></tr><tr><td><input class="form-input" style="width:200px;text-align:left" value="taildern_conversion_paid" onchange="updateCreative(2,'name',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:90px" value="48" onchange="updateCreative(2,'sessions',this.value)"></td><td><input type="number" class="form-input right" style="width:90px" value="35" onchange="updateCreative(2,'newUsers',this.value)"></td><td><input type="number" class="form-input right" style="width:80px" value="0" onchange="updateCreative(2,'orders',this.value)"></td><td><input type="number" class="form-input right" style="width:110px" value="0" onchange="updateCreative(2,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:110px" value="0" onchange="updateCreative(2,'adSpend',this.value)"></td><td><input type="number" step="0.1" class="form-input right" style="width:70px" value="0.0" onchange="updateCreative(2,'ctr',this.value,'pct')"></td><td class="right" style="color:var(--text-2);font-size:12px;">-</td><td><button class="row-delete" onclick="removeCreative(2)">×</button></td></tr></tbody>
+          </table>
+        </div>
+        <div class="form-hint">※ CTR은 % 값 그대로 입력 (예: 2.4) · ROAS는 매출÷집행금액 기준 자동 계산돼요</div>
+      </div>
+
+      <div class="form-section">
+        <h3><span>브랜드 검색량 추이</span><button class="form-add-btn" onclick="addBrandWeek()">+ 추가</button></h3>
+        <div style="overflow-x: auto;">
+          <table class="form-table">
+            <thead><tr style="font-size: 11px; color: var(--text-3); border-bottom: 1px solid var(--border);"><th>주차</th><th>검색량</th><th></th></tr></thead>
+            <tbody id="form-brand"><tr><td><input class="form-input" style="width:80px" value="W18" onchange="updateBrand(0,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="54" onchange="updateBrand(0,'volume',this.value)"></td><td><button class="row-delete" onclick="removeBrand(0)">×</button></td></tr><tr><td><input class="form-input" style="width:80px" value="W19" onchange="updateBrand(1,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="42" onchange="updateBrand(1,'volume',this.value)"></td><td><button class="row-delete" onclick="removeBrand(1)">×</button></td></tr><tr><td><input class="form-input" style="width:80px" value="W20" onchange="updateBrand(2,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="36" onchange="updateBrand(2,'volume',this.value)"></td><td><button class="row-delete" onclick="removeBrand(2)">×</button></td></tr><tr><td><input class="form-input" style="width:80px" value="W21" onchange="updateBrand(3,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="28" onchange="updateBrand(3,'volume',this.value)"></td><td><button class="row-delete" onclick="removeBrand(3)">×</button></td></tr><tr><td><input class="form-input" style="width:80px" value="W22" onchange="updateBrand(4,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="25" onchange="updateBrand(4,'volume',this.value)"></td><td><button class="row-delete" onclick="removeBrand(4)">×</button></td></tr><tr><td><input class="form-input" style="width:80px" value="W23" onchange="updateBrand(5,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="22" onchange="updateBrand(5,'volume',this.value)"></td><td><button class="row-delete" onclick="removeBrand(5)">×</button></td></tr><tr><td><input class="form-input" style="width:80px" value="W24" onchange="updateBrand(6,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="44" onchange="updateBrand(6,'volume',this.value)"></td><td><button class="row-delete" onclick="removeBrand(6)">×</button></td></tr><tr><td><input class="form-input" style="width:80px" value="W25" onchange="updateBrand(7,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="31" onchange="updateBrand(7,'volume',this.value)"></td><td><button class="row-delete" onclick="removeBrand(7)">×</button></td></tr><tr><td><input class="form-input" style="width:80px" value="W26" onchange="updateBrand(8,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="36" onchange="updateBrand(8,'volume',this.value)"></td><td><button class="row-delete" onclick="removeBrand(8)">×</button></td></tr><tr><td><input class="form-input" style="width:80px" value="W27" onchange="updateBrand(9,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="30" onchange="updateBrand(9,'volume',this.value)"></td><td><button class="row-delete" onclick="removeBrand(9)">×</button></td></tr><tr><td><input class="form-input" style="width:80px" value="W28" onchange="updateBrand(10,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="24" onchange="updateBrand(10,'volume',this.value)"></td><td><button class="row-delete" onclick="removeBrand(10)">×</button></td></tr><tr><td><input class="form-input" style="width:80px" value="W29" onchange="updateBrand(11,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="17" onchange="updateBrand(11,'volume',this.value)"></td><td><button class="row-delete" onclick="removeBrand(11)">×</button></td></tr><tr><td><input class="form-input" style="width:80px" value="W30" onchange="updateBrand(12,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="45" onchange="updateBrand(12,'volume',this.value)"></td><td><button class="row-delete" onclick="removeBrand(12)">×</button></td></tr><tr><td><input class="form-input" style="width:80px" value="W31" onchange="updateBrand(13,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="24" onchange="updateBrand(13,'volume',this.value)"></td><td><button class="row-delete" onclick="removeBrand(13)">×</button></td></tr><tr><td><input class="form-input" style="width:80px" value="W32" onchange="updateBrand(14,'week',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:100px" value="0" onchange="updateBrand(14,'volume',this.value)"></td><td><button class="row-delete" onclick="removeBrand(14)">×</button></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3><span>상위 상품 (이번 주 베스트)</span></h3>
+        <div style="overflow-x: auto;">
+          <table class="form-table">
+            <thead><tr style="font-size: 11px; color: var(--text-3); border-bottom: 1px solid var(--border);"><th>상품명</th><th>매출</th><th>판매수량</th></tr></thead>
+            <tbody id="form-products"><tr><td><input class="form-input" style="width:260px;text-align:left" value="" onchange="updateProduct(0,'name',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:120px" value="0" onchange="updateProduct(0,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:80px" value="0" onchange="updateProduct(0,'units',this.value)"></td></tr><tr><td><input class="form-input" style="width:260px;text-align:left" value="" onchange="updateProduct(1,'name',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:120px" value="0" onchange="updateProduct(1,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:80px" value="0" onchange="updateProduct(1,'units',this.value)"></td></tr><tr><td><input class="form-input" style="width:260px;text-align:left" value="" onchange="updateProduct(2,'name',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:120px" value="0" onchange="updateProduct(2,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:80px" value="0" onchange="updateProduct(2,'units',this.value)"></td></tr><tr><td><input class="form-input" style="width:260px;text-align:left" value="" onchange="updateProduct(3,'name',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:120px" value="0" onchange="updateProduct(3,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:80px" value="0" onchange="updateProduct(3,'units',this.value)"></td></tr><tr><td><input class="form-input" style="width:260px;text-align:left" value="" onchange="updateProduct(4,'name',this.value,'string')"></td><td><input type="number" class="form-input right" style="width:120px" value="0" onchange="updateProduct(4,'revenue',this.value)"></td><td><input type="number" class="form-input right" style="width:80px" value="0" onchange="updateProduct(4,'units',this.value)"></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal()">취소</button>
+        <button class="btn-save" onclick="saveData()">저장하고 업데이트</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// SEED_START
+const SEED = {
+  "brand": "TAILDERN",
+  "currentWeek": "W22",
+  "weeks": [
+    {
+      "week": "W18",
+      "month": "2026-05",
+      "sessions": 1480,
+      "newUsers": 920,
+      "revenue": 850000,
+      "orders": 5,
+      "adSpend": 920000,
+      "cvr": 0.0185
+    },
+    {
+      "week": "W19",
+      "month": "2026-05",
+      "sessions": 1395,
+      "newUsers": 845,
+      "revenue": 1120000,
+      "orders": 7,
+      "adSpend": 845000,
+      "cvr": 0.0195
+    },
+    {
+      "week": "W20",
+      "month": "2026-05",
+      "sessions": 1420,
+      "newUsers": 870,
+      "revenue": 980000,
+      "orders": 6,
+      "adSpend": 815000,
+      "cvr": 0.0188
+    },
+    {
+      "week": "W21",
+      "month": "2026-05",
+      "sessions": 1325,
+      "newUsers": 791,
+      "revenue": 1860700,
+      "orders": 9,
+      "adSpend": 789585,
+      "cvr": 0.0207
+    },
+    {
+      "week": "W22",
+      "month": "2026-06",
+      "sessions": 1009,
+      "newUsers": 598,
+      "revenue": 272873,
+      "orders": 3,
+      "adSpend": 561336,
+      "cvr": 0.0209
+    },
+    {
+      "week": "W23",
+      "month": "2026-06",
+      "sessions": 753,
+      "newUsers": 297,
+      "revenue": 729500,
+      "orders": 9,
+      "adSpend": 453479,
+      "cvr": 0
+    },
+    {
+      "week": "W24",
+      "month": "2026-06",
+      "sessions": 4747,
+      "newUsers": 4370,
+      "revenue": 972300,
+      "orders": 11,
+      "adSpend": 2695665,
+      "cvr": 0.005
+    },
+    {
+      "week": "W25",
+      "month": "2026-06",
+      "sessions": 3788,
+      "newUsers": 3363,
+      "revenue": 1452750,
+      "orders": 15,
+      "adSpend": 3046113,
+      "cvr": 0.007
+    },
+    {
+      "week": "W26",
+      "month": "2026-06",
+      "sessions": 2582,
+      "newUsers": 2234,
+      "revenue": 2538820,
+      "orders": 21,
+      "adSpend": 1974186,
+      "cvr": 0.0097
+    },
+    {
+      "week": "W27",
+      "month": "2026-07",
+      "sessions": 4232,
+      "newUsers": 3865,
+      "revenue": 2449099,
+      "orders": 24,
+      "adSpend": 1922168,
+      "cvr": 0.0041
+    },
+    {
+      "week": "W28",
+      "month": "2026-07",
+      "sessions": 4251,
+      "newUsers": 3788,
+      "revenue": 1581970,
+      "orders": 13,
+      "adSpend": 1475376,
+      "cvr": 0.0029
+    },
+    {
+      "week": "W29",
+      "month": "2026-07",
+      "sessions": 1562,
+      "newUsers": 1146,
+      "revenue": 369366,
+      "orders": 5,
+      "adSpend": 746277,
+      "cvr": 0.0215
+    },
+    {
+      "week": "W30",
+      "month": "2026-07",
+      "sessions": 5005,
+      "newUsers": 4010,
+      "revenue": 2877300,
+      "orders": 41,
+      "adSpend": 1172282,
+      "cvr": 0.0066
+    },
+    {
+      "week": "W31",
+      "month": "2026-07",
+      "sessions": 2528,
+      "newUsers": 1893,
+      "revenue": 1333700,
+      "orders": 8,
+      "adSpend": 1236227,
+      "cvr": 0.0066
+    },
+    {
+      "week": "W32",
+      "month": "2026-08",
+      "sessions": 1657,
+      "newUsers": 1107,
+      "revenue": 341497,
+      "orders": 5,
+      "adSpend": 924867,
+      "cvr": 0.004
+    }
+  ],
+  "channelHistory": [
+    {
+      "week": "W21",
+      "channels": [
+        {
+          "name": "DIRECT",
+          "sessions": 462,
+          "share": 0.031,
+          "adSpend": 0,
+          "revenue": 223500,
+          "orders": 2,
+          "roas": 0,
+          "status": "good"
+        },
+        {
+          "name": "META",
+          "sessions": 414,
+          "share": 0.028,
+          "adSpend": 482916,
+          "revenue": 0,
+          "orders": 0,
+          "roas": null,
+          "status": "neutral"
+        },
+        {
+          "name": "네이버",
+          "sessions": 269,
+          "share": 0.018,
+          "adSpend": 306669,
+          "revenue": 0,
+          "orders": 0,
+          "roas": 0,
+          "status": "critical"
+        },
+        {
+          "name": "구글",
+          "sessions": 126,
+          "share": 0.009,
+          "adSpend": 0,
+          "revenue": 0,
+          "orders": 0,
+          "roas": null,
+          "status": "neutral"
+        }
+      ]
+    },
+    {
+      "week": "W22",
+      "channels": [
+        {
+          "name": "DIRECT",
+          "sessions": 360,
+          "share": 0.036,
+          "adSpend": 0,
+          "revenue": 89000,
+          "orders": 1,
+          "roas": 0,
+          "status": "good"
+        },
+        {
+          "name": "네이버",
+          "sessions": 277,
+          "share": 0.027,
+          "adSpend": 326669,
+          "revenue": 0,
+          "orders": 0,
+          "roas": null,
+          "status": "neutral"
+        },
+        {
+          "name": "META",
+          "sessions": 233,
+          "share": 0.023,
+          "adSpend": 234667,
+          "revenue": 807670,
+          "orders": 5,
+          "roas": 3.44,
+          "status": "critical"
+        },
+        {
+          "name": "GOOGLE",
+          "sessions": 124,
+          "share": 0.012,
+          "adSpend": 0,
+          "revenue": 271670,
+          "orders": 1,
+          "roas": null,
+          "status": "neutral"
+        }
+      ]
+    },
+    {
+      "week": "W18",
+      "channels": [
+        {
+          "name": "DIRECT",
+          "sessions": 897,
+          "share": 0.048,
+          "adSpend": 0,
+          "revenue": 200950,
+          "orders": 3,
+          "roas": null,
+          "status": "neutral"
+        },
+        {
+          "name": "네이버",
+          "sessions": 577,
+          "share": 0.031,
+          "adSpend": 326669,
+          "revenue": 566000,
+          "orders": 3,
+          "roas": 1.73,
+          "status": "neutral"
+        },
+        {
+          "name": "META",
+          "sessions": 202,
+          "share": 0.011,
+          "adSpend": 453821,
+          "revenue": 496000,
+          "orders": 4,
+          "roas": 1.09,
+          "status": "neutral"
+        },
+        {
+          "name": "GOOGLE",
+          "sessions": 130,
+          "share": 0.007,
+          "adSpend": 0,
+          "revenue": 94500,
+          "orders": 1,
+          "roas": null,
+          "status": "neutral"
+        }
+      ]
+    },
+    {
+      "week": "W19",
+      "channels": [
+        {
+          "name": "DIRECT",
+          "sessions": 804,
+          "share": 0.047,
+          "adSpend": 0,
+          "revenue": 412000,
+          "orders": 3,
+          "roas": null,
+          "status": "neutral"
+        },
+        {
+          "name": "네이버",
+          "sessions": 400,
+          "share": 0.023,
+          "adSpend": 326669,
+          "revenue": 218000,
+          "orders": 2,
+          "roas": 0.67,
+          "status": "neutral"
+        },
+        {
+          "name": "META",
+          "sessions": 240,
+          "share": 0.014,
+          "adSpend": 68817,
+          "revenue": 0,
+          "orders": 0,
+          "roas": null,
+          "status": "neutral"
+        },
+        {
+          "name": "GOOGLE",
+          "sessions": 119,
+          "share": 0.007,
+          "adSpend": 0,
+          "revenue": 0,
+          "orders": 0,
+          "roas": null,
+          "status": "neutral"
+        }
+      ]
+    },
+    {
+      "week": "W20",
+      "channels": [
+        {
+          "name": "DIRECT",
+          "sessions": 811,
+          "share": 0.043,
+          "adSpend": 0,
+          "revenue": 1538500,
+          "orders": 4,
+          "roas": null,
+          "status": "neutral"
+        },
+        {
+          "name": "META",
+          "sessions": 528,
+          "share": 0.028,
+          "adSpend": 1800069,
+          "revenue": 780000,
+          "orders": 2,
+          "roas": 0.43,
+          "status": "neutral"
+        },
+        {
+          "name": "네이버",
+          "sessions": 388,
+          "share": 0.021,
+          "adSpend": 326669,
+          "revenue": 606000,
+          "orders": 2,
+          "roas": 1.78,
+          "status": "neutral"
+        },
+        {
+          "name": "GOOGLE",
+          "sessions": 127,
+          "share": 0.007,
+          "adSpend": 0,
+          "revenue": 168000,
+          "orders": 1,
+          "roas": null,
+          "status": "neutral"
+        }
+      ]
+    },
+    {
+      "week": "W23",
+      "channels": [
+        {
+          "name": "DIRECT",
+          "sessions": 291,
+          "share": 0.039,
+          "adSpend": 0,
+          "revenue": 0,
+          "orders": 0,
+          "roas": null,
+          "status": "neutral"
+        },
+        {
+          "name": "네이버",
+          "sessions": 244,
+          "share": 0.032,
+          "adSpend": 326669,
+          "revenue": 0,
+          "orders": 0,
+          "roas": null,
+          "status": "neutral"
+        },
+        {
+          "name": "GOOGLE",
+          "sessions": 104,
+          "share": 0.014,
+          "adSpend": 0,
+          "revenue": 505500,
+          "orders": 3,
+          "roas": null,
+          "status": "neutral"
+        },
+        {
+          "name": "META",
+          "sessions": 103,
+          "share": 0.014,
+          "adSpend": 126810,
+          "revenue": 0,
+          "orders": 0,
+          "roas": null,
+          "status": "neutral"
+        }
+      ]
+    },
+    {
+      "week": "W24",
+      "channels": [
+        {
+          "name": "DIRECT",
+          "sessions": 2085,
+          "share": 0.049,
+          "adSpend": 0,
+          "revenue": 342500,
+          "orders": 2
+        },
+        {
+          "name": "META",
+          "sessions": 1621,
+          "share": 0.038,
+          "adSpend": 2368996,
+          "revenue": 89100,
+          "orders": 1
+        },
+        {
+          "name": "커뮤니티",
+          "sessions": 496,
+          "share": 0.01,
+          "adSpend": 0,
+          "revenue": 0,
+          "orders": 0
+        },
+        {
+          "name": "네이버",
+          "sessions": 374,
+          "share": 0.008,
+          "adSpend": 326669,
+          "revenue": 0,
+          "orders": 0
+        }
+      ]
+    },
+    {
+      "week": "W25",
+      "channels": [
+        {
+          "name": "DIRECT",
+          "sessions": 1674,
+          "share": 0.44,
+          "adSpend": 0,
+          "revenue": 84100,
+          "orders": 1
+        },
+        {
+          "name": "META",
+          "sessions": 1132,
+          "share": 0.3,
+          "adSpend": 2719444,
+          "revenue": 1804250,
+          "orders": 10
+        },
+        {
+          "name": "커뮤니티",
+          "sessions": 482,
+          "share": 0.13,
+          "adSpend": 0,
+          "revenue": 0,
+          "orders": 0
+        },
+        {
+          "name": "네이버",
+          "sessions": 299,
+          "share": 0.08,
+          "adSpend": 326669,
+          "revenue": 1225500,
+          "orders": 3
+        }
+      ]
+    },
+    {
+      "week": "W26",
+      "channels": [
+        {
+          "name": "META",
+          "sessions": 1083,
+          "share": 0.42,
+          "adSpend": 1647517,
+          "revenue": 1607118,
+          "orders": 9
+        },
+        {
+          "name": "DIRECT",
+          "sessions": 1011,
+          "share": 0.39,
+          "adSpend": 0,
+          "revenue": 0,
+          "orders": 0
+        },
+        {
+          "name": "네이버",
+          "sessions": 342,
+          "share": 0.13,
+          "adSpend": 326669,
+          "revenue": 1230500,
+          "orders": 6
+        },
+        {
+          "name": "GOOGLE",
+          "sessions": 66,
+          "share": 0.03,
+          "adSpend": 0,
+          "revenue": 0,
+          "orders": 0
+        },
+        {
+          "name": "신규 채널",
+          "sessions": 0,
+          "share": 0,
+          "adSpend": 0,
+          "revenue": 0,
+          "orders": 0
+        }
+      ]
+    },
+    {
+      "week": "W27",
+      "channels": [
+        {
+          "name": "META",
+          "sessions": 2130,
+          "share": 0.5,
+          "adSpend": 1595499,
+          "revenue": 870700,
+          "orders": 4
+        },
+        {
+          "name": "DIRECT",
+          "sessions": 1666,
+          "share": 0.39,
+          "adSpend": 0,
+          "revenue": 423400,
+          "orders": 2
+        },
+        {
+          "name": "네이버",
+          "sessions": 296,
+          "share": 0.07,
+          "adSpend": 326669,
+          "revenue": 646270,
+          "orders": 2
+        },
+        {
+          "name": "GOOGLE",
+          "sessions": 80,
+          "share": 0.02,
+          "adSpend": 0,
+          "revenue": 675000,
+          "orders": 1
+        }
+      ]
+    },
+    {
+      "week": "W28",
+      "channels": [
+        {
+          "name": "META",
+          "sessions": 2184,
+          "share": 0.05,
+          "adSpend": 1148707,
+          "revenue": 365900,
+          "orders": 3
+        },
+        {
+          "name": "DIRECT",
+          "sessions": 1609,
+          "share": 0.37,
+          "adSpend": 0,
+          "revenue": 106300,
+          "orders": 1
+        },
+        {
+          "name": "네이버",
+          "sessions": 311,
+          "share": 0.07,
+          "adSpend": 326669,
+          "revenue": 511600,
+          "orders": 4
+        },
+        {
+          "name": "GOOGLE",
+          "sessions": 57,
+          "share": 0.04,
+          "adSpend": 0,
+          "revenue": 0,
+          "orders": 0
+        }
+      ]
+    },
+    {
+      "week": "W29",
+      "channels": [
+        {
+          "name": "DIRECT",
+          "sessions": 759,
+          "share": 0.0048,
+          "adSpend": 0,
+          "revenue": 456500,
+          "orders": 5
+        },
+        {
+          "name": "META",
+          "sessions": 535,
+          "share": 0.0034,
+          "adSpend": 419608,
+          "revenue": 283700,
+          "orders": 3
+        },
+        {
+          "name": "네이버",
+          "sessions": 203,
+          "share": 0.0013,
+          "adSpend": 326669,
+          "revenue": 227700,
+          "orders": 3
+        },
+        {
+          "name": "GOOGLE",
+          "sessions": 45,
+          "share": 0.0003,
+          "adSpend": 0,
+          "revenue": 0,
+          "orders": 0
+        }
+      ]
+    },
+    {
+      "week": "W30",
+      "channels": [
+        {
+          "name": "GOOGLE",
+          "sessions": 2185,
+          "share": 0.0044,
+          "adSpend": 284610,
+          "revenue": 0,
+          "orders": 0
+        },
+        {
+          "name": "DIRECT",
+          "sessions": 1655,
+          "share": 0.0033,
+          "adSpend": 0,
+          "revenue": 1470000,
+          "orders": 12
+        },
+        {
+          "name": "META",
+          "sessions": 573,
+          "share": 0.0011,
+          "adSpend": 561003,
+          "revenue": 84450,
+          "orders": 10
+        },
+        {
+          "name": "네이버",
+          "sessions": 485,
+          "share": 0.001,
+          "adSpend": 326669,
+          "revenue": 1208600,
+          "orders": 17
+        }
+      ]
+    },
+    {
+      "week": "W31",
+      "channels": [
+        {
+          "name": "GOOGLE",
+          "sessions": 799,
+          "share": 0.032,
+          "adSpend": 214129,
+          "revenue": 303600,
+          "orders": 2
+        },
+        {
+          "name": "DIRECT",
+          "sessions": 793,
+          "share": 0.031,
+          "adSpend": 0,
+          "revenue": 84100,
+          "orders": 1
+        },
+        {
+          "name": "META",
+          "sessions": 569,
+          "share": 0.023,
+          "adSpend": 695429,
+          "revenue": 769000,
+          "orders": 5
+        },
+        {
+          "name": "네이버",
+          "sessions": 319,
+          "share": 0.013,
+          "adSpend": 326669,
+          "revenue": 697900,
+          "orders": 4
+        }
+      ]
+    },
+    {
+      "week": "W32",
+      "channels": [
+        {
+          "name": "DIRECT",
+          "sessions": 621,
+          "share": 0.0037,
+          "adSpend": 0,
+          "revenue": 0,
+          "orders": 0
+        },
+        {
+          "name": "META",
+          "sessions": 363,
+          "share": 0.0022,
+          "adSpend": 517041,
+          "revenue": 0,
+          "orders": 1
+        },
+        {
+          "name": "GOOGLE",
+          "sessions": 359,
+          "share": 0.0022,
+          "adSpend": 81157,
+          "revenue": 0,
+          "orders": 0
+        },
+        {
+          "name": "네이버",
+          "sessions": 285,
+          "share": 0.0017,
+          "adSpend": 326669,
+          "revenue": 0,
+          "orders": 0
+        }
+      ]
+    }
+  ],
+  "brandSearch": [
+    {
+      "week": "W18",
+      "volume": 54
+    },
+    {
+      "week": "W19",
+      "volume": 42
+    },
+    {
+      "week": "W20",
+      "volume": 36
+    },
+    {
+      "week": "W21",
+      "volume": 28
+    },
+    {
+      "week": "W22",
+      "volume": 25
+    },
+    {
+      "week": "W23",
+      "volume": 22
+    },
+    {
+      "week": "W24",
+      "volume": 44
+    },
+    {
+      "week": "W25",
+      "volume": 31
+    },
+    {
+      "week": "W26",
+      "volume": 36
+    },
+    {
+      "week": "W27",
+      "volume": 30
+    },
+    {
+      "week": "W28",
+      "volume": 24
+    },
+    {
+      "week": "W29",
+      "volume": 17
+    },
+    {
+      "week": "W30",
+      "volume": 45
+    },
+    {
+      "week": "W31",
+      "volume": 24
+    },
+    {
+      "week": "W32",
+      "volume": 30
+    }
+  ],
+  "topProducts": [
+    {
+      "name": "",
+      "revenue": 0,
+      "units": 0
+    },
+    {
+      "name": "",
+      "revenue": 0,
+      "units": 0
+    },
+    {
+      "name": "",
+      "revenue": 0,
+      "units": 0
+    },
+    {
+      "name": "",
+      "revenue": 0,
+      "units": 0
+    },
+    {
+      "name": "",
+      "revenue": 0,
+      "units": 0
+    }
+  ],
+  "funnelHistory": [
+    {
+      "week": "W20",
+      "sessions": 1218,
+      "productViews": 693,
+      "addToCarts": 18,
+      "purchases": 6
+    },
+    {
+      "week": "W21",
+      "sessions": 838,
+      "productViews": 406,
+      "addToCarts": 11,
+      "purchases": 4
+    },
+    {
+      "week": "W22",
+      "sessions": 646,
+      "productViews": 319,
+      "addToCarts": 8,
+      "purchases": 1
+    },
+    {
+      "week": "W23",
+      "sessions": 331,
+      "productViews": 157,
+      "addToCarts": 6,
+      "purchases": 4
+    },
+    {
+      "week": "W24",
+      "sessions": 3890,
+      "productViews": 1003,
+      "addToCarts": 14,
+      "purchases": 1
+    },
+    {
+      "week": "W25",
+      "sessions": 3062,
+      "productViews": 1144,
+      "addToCarts": 17,
+      "purchases": 3
+    },
+    {
+      "week": "W26",
+      "sessions": 2015,
+      "productViews": 1047,
+      "addToCarts": 9,
+      "purchases": 2
+    },
+    {
+      "week": "W27",
+      "sessions": 3428,
+      "productViews": 1435,
+      "addToCarts": 12,
+      "purchases": 5
+    },
+    {
+      "week": "W28",
+      "sessions": 3438,
+      "productViews": 1281,
+      "addToCarts": 20,
+      "purchases": 2
+    },
+    {
+      "week": "W29",
+      "sessions": 1203,
+      "productViews": 446,
+      "addToCarts": 11,
+      "purchases": 2
+    },
+    {
+      "week": "W30",
+      "sessions": 3943,
+      "productViews": 1057,
+      "addToCarts": 30,
+      "purchases": 6
+    },
+    {
+      "week": "W31",
+      "sessions": 1949,
+      "productViews": 617,
+      "addToCarts": 11,
+      "purchases": 0
+    },
+    {
+      "week": "W32",
+      "sessions": 1177,
+      "productViews": 389,
+      "addToCarts": 18,
+      "purchases": 0
+    }
+  ],
+  "trafficHistory": [
+    {
+      "week": "W21",
+      "traffic": [
+        {
+          "platform": "DIRECT",
+          "type": "직접 유입",
+          "sessions": 462,
+          "revenue": 223500,
+          "orders": 2
+        },
+        {
+          "platform": "META",
+          "type": "유료 소셜",
+          "sessions": 356,
+          "revenue": 0,
+          "orders": 0
+        },
+        {
+          "platform": "네이버",
+          "type": "유료 검색",
+          "sessions": 249,
+          "revenue": 771700,
+          "orders": 3
+        },
+        {
+          "platform": "구글",
+          "type": "오가닉 검색",
+          "sessions": 126,
+          "revenue": 69500,
+          "orders": 1
+        }
+      ]
+    },
+    {
+      "week": "W22",
+      "traffic": [
+        {
+          "platform": "DIRECT",
+          "type": "직접 유입",
+          "sessions": 360,
+          "revenue": 89000,
+          "orders": 1
+        },
+        {
+          "platform": "네이버",
+          "type": "유료 검색",
+          "sessions": 260,
+          "revenue": 0,
+          "orders": 0
+        },
+        {
+          "platform": "META",
+          "type": "유료 소셜",
+          "sessions": 183,
+          "revenue": 69500,
+          "orders": 1
+        },
+        {
+          "platform": "구글",
+          "type": "오가닉 검색",
+          "sessions": 124,
+          "revenue": 271670,
+          "orders": 1
+        }
+      ]
+    },
+    {
+      "week": "W18",
+      "traffic": [
+        {
+          "platform": "DIRECT",
+          "type": "직접 유입",
+          "sessions": 897,
+          "revenue": 2009500,
+          "orders": 3
+        },
+        {
+          "platform": "네이버",
+          "type": "유료 검색",
+          "sessions": 545,
+          "revenue": 411500,
+          "orders": 4
+        },
+        {
+          "platform": "GOOGLE",
+          "type": "오가닉 검색",
+          "sessions": 130,
+          "revenue": 94500,
+          "orders": 1
+        }
+      ]
+    },
+    {
+      "week": "W19",
+      "traffic": [
+        {
+          "platform": "DIRECT",
+          "type": "직접 유입",
+          "sessions": 804,
+          "revenue": 412000,
+          "orders": 3
+        },
+        {
+          "platform": "네이버",
+          "type": "유료 검색",
+          "sessions": 379,
+          "revenue": 138500,
+          "orders": 2
+        },
+        {
+          "platform": "META",
+          "type": "유료 소셜",
+          "sessions": 144,
+          "revenue": 0,
+          "orders": 0
+        },
+        {
+          "platform": "GOOGLE",
+          "type": "오가닉 검색",
+          "sessions": 119,
+          "revenue": 0,
+          "orders": 0
+        }
+      ]
+    },
+    {
+      "week": "W20",
+      "traffic": [
+        {
+          "platform": "DIRECT",
+          "type": "직접 유입",
+          "sessions": 811,
+          "revenue": 1538500,
+          "orders": 4
+        },
+        {
+          "platform": "META",
+          "type": "유료 소셜",
+          "sessions": 0,
+          "revenue": 0,
+          "orders": 0
+        },
+        {
+          "platform": "네이버",
+          "type": "유료 검색",
+          "sessions": 365,
+          "revenue": 241200,
+          "orders": 1
+        },
+        {
+          "platform": "GOOGLE",
+          "type": "오가닉 검색",
+          "sessions": 127,
+          "revenue": 168000,
+          "orders": 1
+        }
+      ]
+    },
+    {
+      "week": "W23",
+      "traffic": [
+        {
+          "platform": "DIRECT",
+          "type": "직접 유입",
+          "sessions": 291,
+          "revenue": 0,
+          "orders": 0
+        },
+        {
+          "platform": "네이버",
+          "type": "유료 검색",
+          "sessions": 222,
+          "revenue": 223500,
+          "orders": 1
+        },
+        {
+          "platform": "GOOGLE",
+          "type": "오가닉 검색",
+          "sessions": 104,
+          "revenue": 505000,
+          "orders": 3
+        },
+        {
+          "platform": "META",
+          "type": "유료 소셜",
+          "sessions": 34,
+          "revenue": 0,
+          "orders": 0
+        }
+      ]
+    },
+    {
+      "week": "W24",
+      "traffic": [
+        {
+          "platform": "DIRECT",
+          "type": "직접 유입",
+          "sessions": 2085,
+          "revenue": 342500,
+          "orders": 2
+        },
+        {
+          "platform": "META",
+          "type": "유료 소셜",
+          "sessions": 1424,
+          "revenue": 89100,
+          "orders": 1
+        },
+        {
+          "platform": "커뮤니티",
+          "type": "추천(PR)",
+          "sessions": 496,
+          "revenue": 0,
+          "orders": 0
+        },
+        {
+          "platform": "네이버",
+          "type": "유료 검색",
+          "sessions": 95,
+          "revenue": 0,
+          "orders": 0
+        }
+      ]
+    },
+    {
+      "week": "W25",
+      "traffic": [
+        {
+          "platform": "DIRECT",
+          "type": "직접 유입",
+          "sessions": 1674,
+          "revenue": 84100,
+          "orders": 1
+        },
+        {
+          "platform": "META",
+          "type": "유료 소셜",
+          "sessions": 922,
+          "revenue": 1804250,
+          "orders": 10
+        },
+        {
+          "platform": "커뮤니티",
+          "type": "추천(PR)",
+          "sessions": 482,
+          "revenue": 0,
+          "orders": 0
+        },
+        {
+          "platform": "네이버",
+          "type": "유료 검색",
+          "sessions": 299,
+          "revenue": 1225500,
+          "orders": 3
+        }
+      ]
+    },
+    {
+      "week": "W26",
+      "traffic": [
+        {
+          "platform": "META",
+          "type": "유료 소셜",
+          "sessions": 1005,
+          "revenue": 1607118,
+          "orders": 9
+        },
+        {
+          "platform": "DIRECT",
+          "type": "직접 유입",
+          "sessions": 1011,
+          "revenue": 0,
+          "orders": 0
+        },
+        {
+          "platform": "네이버",
+          "type": "유료 검색",
+          "sessions": 342,
+          "revenue": 1230500,
+          "orders": 6
+        },
+        {
+          "platform": "META",
+          "type": "오가닉 소셜",
+          "sessions": 75,
+          "revenue": 0,
+          "orders": 0
+        }
+      ]
+    },
+    {
+      "week": "W27",
+      "traffic": [
+        {
+          "platform": "META",
+          "type": "유료 소셜",
+          "sessions": 2130,
+          "revenue": 870700,
+          "orders": 4
+        },
+        {
+          "platform": "DIRECT",
+          "type": "직접 유입",
+          "sessions": 1666,
+          "revenue": 423400,
+          "orders": 2
+        },
+        {
+          "platform": "네이버",
+          "type": "유료 검색",
+          "sessions": 296,
+          "revenue": 1137800,
+          "orders": 6
+        },
+        {
+          "platform": "GOOGLE",
+          "type": "오가닉 검색",
+          "sessions": 80,
+          "revenue": 675000,
+          "orders": 1
+        }
+      ]
+    },
+    {
+      "week": "W28",
+      "traffic": [
+        {
+          "platform": "MEAT",
+          "type": "유료 소셜",
+          "sessions": 2028,
+          "revenue": 365900,
+          "orders": 3
+        },
+        {
+          "platform": "DIRECT",
+          "type": "직접 유입",
+          "sessions": 1609,
+          "revenue": 106300,
+          "orders": 1
+        },
+        {
+          "platform": "네이버",
+          "type": "유료 검색",
+          "sessions": 311,
+          "revenue": 511600,
+          "orders": 4
+        },
+        {
+          "platform": "GOOGLE",
+          "type": "오가닉 검색",
+          "sessions": 57,
+          "revenue": 0,
+          "orders": 0
+        }
+      ]
+    },
+    {
+      "week": "W29",
+      "traffic": [
+        {
+          "platform": "DIRECT",
+          "type": "직접 유입",
+          "sessions": 759,
+          "revenue": 456500,
+          "orders": 5
+        },
+        {
+          "platform": "META",
+          "type": "오가닉 소셜",
+          "sessions": 120,
+          "revenue": 0,
+          "orders": 0
+        },
+        {
+          "platform": "META",
+          "type": "유료 소셜",
+          "sessions": 408,
+          "revenue": 283700,
+          "orders": 3
+        },
+        {
+          "platform": "네이버",
+          "type": "유료 검색",
+          "sessions": 203,
+          "revenue": 227700,
+          "orders": 3
+        }
+      ]
+    },
+    {
+      "week": "W30",
+      "traffic": [
+        {
+          "platform": "GOOGLE",
+          "type": "유료 검색",
+          "sessions": 2103,
+          "revenue": 0,
+          "orders": 0
+        },
+        {
+          "platform": "DIRECT",
+          "type": "직접 유입",
+          "sessions": 1655,
+          "revenue": 1470000,
+          "orders": 12
+        },
+        {
+          "platform": "META",
+          "type": "유료 검색",
+          "sessions": 498,
+          "revenue": 844500,
+          "orders": 10
+        },
+        {
+          "platform": "네이버",
+          "type": "유료 검색",
+          "sessions": 485,
+          "revenue": 1208600,
+          "orders": 17
+        }
+      ]
+    },
+    {
+      "week": "W31",
+      "traffic": [
+        {
+          "platform": "GOOGLE",
+          "type": "유료 검색",
+          "sessions": 769,
+          "revenue": 303600,
+          "orders": 2
+        },
+        {
+          "platform": "DIRECT",
+          "type": "직접 유입",
+          "sessions": 793,
+          "revenue": 84100,
+          "orders": 1
+        },
+        {
+          "platform": "META",
+          "type": "유료 소셜",
+          "sessions": 515,
+          "revenue": 138100,
+          "orders": 1
+        },
+        {
+          "platform": "네이버",
+          "type": "유료 검색",
+          "sessions": 319,
+          "revenue": 697900,
+          "orders": 4
+        }
+      ]
+    },
+    {
+      "week": "W32",
+      "traffic": [
+        {
+          "platform": "DIRECT",
+          "type": "직접 유입",
+          "sessions": 621,
+          "revenue": 0,
+          "orders": 0
+        },
+        {
+          "platform": "META",
+          "type": "유료 소셜",
+          "sessions": 253,
+          "revenue": 0,
+          "orders": 0
+        },
+        {
+          "platform": "GOOGLE",
+          "type": "유료 검색",
+          "sessions": 296,
+          "revenue": 0,
+          "orders": 0
+        },
+        {
+          "platform": "네이버",
+          "type": "유료 검색",
+          "sessions": 285,
+          "revenue": 0,
+          "orders": 0
+        }
+      ]
+    }
+  ],
+  "metaCreativeHistory": [
+    {
+      "week": "W27",
+      "creatives": [
+        {
+          "name": "taildern_traffic",
+          "sessions": 1386,
+          "newUsers": 1410,
+          "orders": 0,
+          "revenue": 0,
+          "adSpend": 0,
+          "ctr": 0
+        },
+        {
+          "name": "OT104BR",
+          "sessions": 233,
+          "newUsers": 187,
+          "orders": 1,
+          "revenue": 111100,
+          "adSpend": 0,
+          "ctr": 0
+        },
+        {
+          "name": "yoojitae",
+          "sessions": 196,
+          "newUsers": 155,
+          "orders": 0,
+          "revenue": 0,
+          "adSpend": 0,
+          "ctr": 0
+        },
+        {
+          "name": "taildern_asc_conversion_yoojitae",
+          "sessions": 72,
+          "newUsers": 59,
+          "orders": 0,
+          "revenue": 0,
+          "adSpend": 0,
+          "ctr": 0
+        },
+        {
+          "name": "taildern_catalog_seasonoff",
+          "sessions": 65,
+          "newUsers": 57,
+          "orders": 0,
+          "revenue": 0,
+          "adSpend": 0,
+          "ctr": 0
+        }
+      ]
+    },
+    {
+      "week": "W28",
+      "creatives": [
+        {
+          "name": "taildern_traffic",
+          "sessions": 1811,
+          "newUsers": 1715,
+          "orders": 0,
+          "revenue": 0,
+          "adSpend": 0,
+          "ctr": 0
+        },
+        {
+          "name": "taildern_asc_conversion_yoojitae",
+          "sessions": 102,
+          "newUsers": 78,
+          "orders": 0,
+          "revenue": 0,
+          "adSpend": 0,
+          "ctr": 0
+        },
+        {
+          "name": "taildern_catalog_seasonoff",
+          "sessions": 45,
+          "newUsers": 32,
+          "orders": 0,
+          "revenue": 0,
+          "adSpend": 0,
+          "ctr": 0
+        }
+      ]
+    },
+    {
+      "week": "W29",
+      "creatives": [
+        {
+          "name": "taildern_traffic",
+          "sessions": 158,
+          "newUsers": 116,
+          "orders": 0,
+          "revenue": 0,
+          "adSpend": 0,
+          "ctr": 0
+        },
+        {
+          "name": "bsa_naver_mo",
+          "sessions": 102,
+          "newUsers": 77,
+          "orders": 3,
+          "revenue": 227700,
+          "adSpend": 0,
+          "ctr": 0
+        },
+        {
+          "name": "bsa_naver_pc",
+          "sessions": 81,
+          "newUsers": 12,
+          "orders": 0,
+          "revenue": 0,
+          "adSpend": 0,
+          "ctr": 0
+        }
+      ]
+    },
+    {
+      "week": "W30",
+      "creatives": [
+        {
+          "name": "taildern_pmax",
+          "sessions": 2100,
+          "newUsers": 1815,
+          "orders": 0,
+          "revenue": 0,
+          "adSpend": 0,
+          "ctr": 0
+        },
+        {
+          "name": "bsa_naver_mo",
+          "sessions": 313,
+          "newUsers": 222,
+          "orders": 13,
+          "revenue": 765300,
+          "adSpend": 0,
+          "ctr": 0
+        },
+        {
+          "name": "taildern_traffic",
+          "sessions": 257,
+          "newUsers": 175,
+          "orders": 0,
+          "revenue": 0,
+          "adSpend": 0,
+          "ctr": 0
+        },
+        {
+          "name": "새 소재",
+          "sessions": 0,
+          "newUsers": 0,
+          "orders": 0,
+          "revenue": 0,
+          "adSpend": 0,
+          "ctr": 0
+        }
+      ]
+    },
+    {
+      "week": "W31",
+      "creatives": [
+        {
+          "name": "taildern_pmax2",
+          "sessions": 262,
+          "newUsers": 215,
+          "orders": 0,
+          "revenue": 0,
+          "adSpend": 0,
+          "ctr": 0
+        },
+        {
+          "name": "taildern_traffic",
+          "sessions": 103,
+          "newUsers": 75,
+          "orders": 0,
+          "revenue": 0,
+          "adSpend": 0,
+          "ctr": 0
+        },
+        {
+          "name": "taildern_conversion_paid",
+          "sessions": 48,
+          "newUsers": 35,
+          "orders": 0,
+          "revenue": 0,
+          "adSpend": 0,
+          "ctr": 0
+        }
+      ]
+    }
+  ]
+};
+// SEED_END
+
+const COLORS = ['#3B82F6', '#60A5FA', '#34D399', '#A78BFA', '#F472B6', '#FBBF24'];
+const COLORS_DONUT = ['#3B82F6', '#1E40AF', '#60A5FA', '#A78BFA', '#94A3B8', '#FBBF24'];
+let data = JSON.parse(JSON.stringify(SEED));
+let charts = {};
+let selectedWeekIdx = null; // null = 항상 최신 주차
+
+const KRW = (n) => { if (n === null || n === undefined) return '-'; if (n >= 100000000) return '₩' + (n/100000000).toFixed(2) + '억'; if (n >= 10000) return '₩' + (n/10000).toFixed(1) + '만'; return '₩' + n.toLocaleString(); };
+const PCT = (n) => n === null || n === undefined ? '-' : (n*100).toFixed(2) + '%';
+const NUM = (n) => n === null || n === undefined ? '-' : n.toLocaleString();
+const calcWOW = (cur, prev) => !prev || prev === 0 ? null : (cur - prev) / prev;
+
+function showToast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2800); }
+
+function loadData() {
+  // LOAD_DATA_START
+  // 공유용 — 데이터 파일에 포함됨
+  // LOAD_DATA_END
+}
+function persistData() { try { localStorage.setItem('taildern_dashboard', JSON.stringify(data)); } catch (e) { alert('저장 실패: ' + e.message); } }
+
+function exportData() {
+  try {
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const date = new Date().toISOString().slice(0, 10);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'taildern_dashboard_' + date + '_' + data.currentWeek + '.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url); showToast('✓ 백업 다운로드 완료');
+  } catch (e) { alert('백업 실패: ' + e.message); }
+}
+
+function exportWithData() {
+  const btn = document.getElementById('share-btn');
+  const orig = btn.textContent;
+  btn.textContent = '⏳ 생성 중...'; btn.disabled = true;
+  try {
+    let html = document.documentElement.outerHTML;
+    // 1. SEED 데이터를 현재 data로 교체
+    const newSeed = '// SEED_START\nconst SEED = ' + JSON.stringify(data, null, 2) + ';\n// SEED_END';
+    html = html.replace(/\/\/ SEED_START[\s\S]*?\/\/ SEED_END/, newSeed);
+    // 2. loadData가 localStorage 읽지 않도록 (SEED에 이미 포함)
+    html = html.replace(
+      /\/\/ LOAD_DATA_START[\s\S]*?\/\/ LOAD_DATA_END/,
+      '// LOAD_DATA_START\n  // 공유용 — 데이터 파일에 포함됨\n  // LOAD_DATA_END'
+    );
+    const date = new Date().toISOString().slice(0, 10);
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'taildern_유입현황_' + date + '_공유용.html';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    btn.textContent = orig; btn.disabled = false;
+    showToast('✓ 공유용 HTML 완성 — 파일 하나만 보내면 돼요');
+  } catch (e) {
+    btn.textContent = orig; btn.disabled = false;
+    alert('생성 실패: ' + e.message);
+  }
+}
+function exportPDF() {
+  const btn = document.getElementById('pdf-btn');
+  const orig = btn.textContent;
+  if (typeof html2canvas === 'undefined' || !window.jspdf) {
+    showToast('인쇄 창에서 "PDF로 저장"을 선택하세요');
+    setTimeout(() => window.print(), 400);
+    return;
+  }
+  const el = document.querySelector('.container');
+  btn.textContent = '⏳ 생성 중...';
+  btn.disabled = true;
+  showToast('PDF 생성 중... 잠시만요');
+  const date = new Date().toISOString().slice(0, 10);
+
+  // 콘텐츠 전체를 실제 크기 그대로 캡처 (가로/세로 잘림 방지)
+  html2canvas(el, {
+    scale: 2, useCORS: true, backgroundColor: '#F7F7F5',
+    width: el.scrollWidth, height: el.scrollHeight,
+    windowWidth: el.scrollWidth, scrollX: 0, scrollY: 0
+  }).then(canvas => {
+    const { jsPDF } = window.jspdf;
+    const imgRatio = canvas.width / canvas.height;
+    // 콘텐츠 비율에 따라 용지 방향 자동 결정 (세로로 길면 portrait)
+    const portrait = imgRatio < 1;
+    // A3 한 장 (mm)
+    const pageW = portrait ? 297 : 420;
+    const pageH = portrait ? 420 : 297;
+    const margin = 8;
+    const availW = pageW - margin * 2;
+    const availH = pageH - margin * 2;
+    const pageRatio = availW / availH;
+    // 비율 유지하며 페이지 안에 완전히 들어가게 축소 (fit)
+    let drawW, drawH;
+    if (imgRatio > pageRatio) { drawW = availW; drawH = availW / imgRatio; }
+    else { drawH = availH; drawW = availH * imgRatio; }
+    const x = (pageW - drawW) / 2;
+    const y = (pageH - drawH) / 2;
+    const pdf = new jsPDF({ unit: 'mm', format: 'a3', orientation: portrait ? 'portrait' : 'landscape' });
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', x, y, drawW, drawH);
+    pdf.save('taildern_dashboard_' + date + '_' + data.currentWeek + '.pdf');
+    btn.textContent = orig; btn.disabled = false;
+    showToast('✓ PDF 다운로드 완료 (A3 한 페이지)');
+  }).catch(() => {
+    btn.textContent = orig; btn.disabled = false;
+    showToast('PDF 생성 실패 — 인쇄 창으로 진행해요');
+    setTimeout(() => window.print(), 400);
+  });
+}
+
+function importData(event) {
+  const file = event.target.files[0]; if (!file) return;
+  if (!confirm('현재 데이터를 덮어씌웁니다. 계속하시겠습니까?\n(걱정되면 먼저 "백업"을 받아두세요)')) { event.target.value = ''; return; }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const imp = JSON.parse(e.target.result);
+      if (!imp.weeks || !(imp.channels || imp.channelHistory)) { alert('올바른 백업 파일이 아닙니다.'); event.target.value=''; return; }
+      if (!imp.brandSearch) imp.brandSearch = []; if (!imp.topProducts) imp.topProducts = [];
+      if (!imp.channelHistory) { const w = imp.currentWeek || 'W?'; imp.channelHistory = imp.channels ? [{ week: w, channels: imp.channels }] : []; delete imp.channels; }
+      if (!imp.trafficHistory) { const w = imp.currentWeek || 'W?'; imp.trafficHistory = imp.traffic ? [{ week: w, traffic: imp.traffic }] : []; delete imp.traffic; }
+      if (!imp.funnelHistory) {
+        if (imp.funnel && imp.funnel.sessions !== undefined) {
+          imp.funnelHistory = [{ week: imp.currentWeek || 'W22', sessions: imp.funnel.sessions, productViews: imp.funnel.productViews, addToCarts: imp.funnel.addToCarts, purchases: imp.funnel.purchases }];
+        } else {
+          imp.funnelHistory = [];
+        }
+      }
+      delete imp.funnel;
+      if (!imp.metaCreativeHistory) imp.metaCreativeHistory = [];
+      data = imp; persistData(); renderAll(); showToast('✓ 백업 데이터 복원 완료');
+    } catch (err) { alert('파일을 읽을 수 없어요: ' + err.message); }
+    event.target.value = '';
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function renderKPIs() {
+  if (selectedWeekIdx === null || selectedWeekIdx >= data.weeks.length) selectedWeekIdx = data.weeks.length - 1;
+  const cur = data.weeks[selectedWeekIdx];
+  const prev = selectedWeekIdx > 0 ? data.weeks[selectedWeekIdx - 1] : null;
+  const last8 = data.weeks.slice(Math.max(0, selectedWeekIdx - 7), selectedWeekIdx + 1);
+  const curAOV = cur.orders > 0 ? cur.revenue / cur.orders : 0;
+  const prevAOV = prev && prev.orders > 0 ? prev.revenue / prev.orders : 0;
+  const curCPA = cur.orders > 0 ? cur.adSpend / cur.orders : 0;
+  const prevCPA = prev && prev.orders > 0 ? prev.adSpend / prev.orders : 0;
+  // MER (전체 효율) = 전체 실매출 / 전체 광고비
+  const curMER = cur.adSpend > 0 ? cur.revenue / cur.adSpend : 0;
+  const prevMER = prev && prev.adSpend > 0 ? prev.revenue / prev.adSpend : 0;
+  // 광고 ROAS (채널 기여) = 채널 기여 매출 합 / 채널 광고비 합
+  const weekLabel = getWeekLabel();
+  const curChannels = getChannelsForWeek(weekLabel) || [];
+  // 광고비를 쓴 채널만 대상으로 계산 (오가닉/직접유입 매출은 분자에서 제외)
+  const paidChannels = curChannels.filter(c => (c.adSpend || 0) > 0);
+  const adRev = paidChannels.reduce((s, c) => s + (c.revenue || 0), 0);
+  const adSpendCh = paidChannels.reduce((s, c) => s + (c.adSpend || 0), 0);
+  const adROAS = adSpendCh > 0 ? adRev / adSpendCh : 0;
+
+  const kpis = [
+    { id: 'adspend', label: '총 광고비', value: KRW(cur.adSpend), change: calcWOW(cur.adSpend, prev && prev.adSpend), spark: last8.map(w => w.adSpend), invert: true },
+    { id: 'revenue', label: '총 매출 (실결제)', value: KRW(cur.revenue), change: calcWOW(cur.revenue, prev && prev.revenue), spark: last8.map(w => w.revenue) },
+    { id: 'adroas', label: '광고 ROAS', value: adROAS > 0 ? (adROAS * 100).toFixed(0) + '%' : '-', noSpark: true, hint: '채널 기여 기준' },
+    { id: 'mer', label: 'MER (전체효율)', value: curMER > 0 ? (curMER * 100).toFixed(0) + '%' : '-', change: calcWOW(curMER, prevMER), spark: last8.map(w => w.adSpend > 0 ? w.revenue / w.adSpend : 0) },
+    { id: 'cvr', label: 'CVR', value: PCT(cur.cvr), change: calcWOW(cur.cvr, prev && prev.cvr), spark: last8.map(w => w.cvr || 0) },
+    { id: 'aov', label: '객단가 AOV', value: curAOV > 0 ? KRW(curAOV) : '-', change: calcWOW(curAOV, prevAOV), spark: last8.map(w => w.orders > 0 ? w.revenue / w.orders : 0) },
+    { id: 'cpa', label: 'CPA', value: curCPA > 0 ? KRW(curCPA) : '-', change: calcWOW(curCPA, prevCPA), spark: last8.map(w => w.orders > 0 ? w.adSpend / w.orders : 0), invert: true }
+  ];
+
+  document.getElementById('kpi-row').innerHTML = kpis.map(k => {
+    let ch = '<span class="kpi-change ch-flat">—</span>';
+    if (k.change !== null && k.change !== undefined && !isNaN(k.change)) {
+      const up = k.change > 0;
+      const positive = k.invert ? !up : up;
+      const cls = Math.abs(k.change) < 0.001 ? 'ch-flat' : positive ? 'ch-up' : 'ch-down';
+      const arrow = up ? '▲' : '▼';
+      ch = '<span class="kpi-change ' + cls + '">' + arrow + ' ' + Math.abs(k.change*100).toFixed(1) + '%</span>';
+    }
+    const sparkHtml = k.noSpark
+      ? '<div class="kpi-spark" style="display:flex;align-items:center;"><span style="font-size:10px;color:var(--text-3)">' + (k.hint || '') + '</span></div>'
+      : '<div class="kpi-spark"><canvas id="spark-' + k.id + '"></canvas></div>';
+    return '<div class="kpi-card">' +
+      '<div class="kpi-top"><span class="kpi-label">' + k.label + '</span>' + ch + '</div>' +
+      '<div class="kpi-value">' + k.value + '</div>' +
+      sparkHtml +
+    '</div>';
+  }).join('');
+
+  kpis.forEach(k => {
+    if (k.noSpark) return;
+    const canvas = document.getElementById('spark-' + k.id);
+    if (!canvas) return;
+    if (charts['spark-' + k.id]) charts['spark-' + k.id].destroy();
+    const positive = k.invert ? (k.change || 0) <= 0 : (k.change || 0) >= 0;
+    const color = positive ? '#059669' : '#DC2626';
+    charts['spark-' + k.id] = new Chart(canvas, {
+      type: 'line',
+      data: { labels: k.spark.map((_, i) => i), datasets: [{ data: k.spark, borderColor: color, backgroundColor: color + '18', borderWidth: 1.8, fill: true, tension: 0.4, pointRadius: 0 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false } }, elements: { point: { radius: 0 } } }
+    });
+  });
+}
+
+function renderChannels() {
+  const week = getWeekLabel();
+  const channels = getChannelsForWeek(week);
+  document.getElementById('ch-week-label').textContent = week;
+
+  if (!channels || channels.length === 0) {
+    document.getElementById('channel-table').innerHTML =
+      '<tr><td colspan="6" style="color:var(--text-3);text-align:center;padding:20px;font-size:13px;">' +
+      week + ' 채널 데이터가 없어요. 데이터 업데이트에서 입력해주세요.</td></tr>';
+    return;
+  }
+
+  document.getElementById('channel-table').innerHTML = channels.map((c, i) => {
+    let roasCell = '<span style="color:var(--text-3)">-</span>';
+    if (c.roas !== null && c.roas !== undefined) {
+      const cls = c.status === 'critical' ? 'badge-bad' : c.status === 'good' ? 'badge-good' : 'badge-neutral';
+      roasCell = '<span class="badge ' + cls + '">' + (c.roas * 100).toFixed(0) + '%</span>';
+    }
+    const sb = { good: '<span class="badge badge-good">양호</span>', neutral: '<span class="badge badge-neutral">중립</span>', critical: '<span class="badge badge-bad">위험</span>' }[c.status] || '<span class="badge badge-neutral">-</span>';
+    return '<tr>' +
+      '<td><span class="dot" style="display:inline-block;margin-right:8px;background:' + COLORS[i % COLORS.length] + '"></span><span class="channel-name">' + c.name + '</span></td>' +
+      '<td class="right">' + NUM(c.sessions) + '</td>' +
+      '<td class="right" style="color:var(--text-2)">' + (c.adSpend > 0 ? KRW(c.adSpend) : '-') + '</td>' +
+      '<td class="right">' + (c.revenue > 0 ? KRW(c.revenue) : '-') + '</td>' +
+      '<td class="right">' + roasCell + '</td>' +
+      '<td class="right">' + sb + '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+function generateInsights() {
+  if (selectedWeekIdx === null || selectedWeekIdx >= data.weeks.length) selectedWeekIdx = data.weeks.length - 1;
+  const insights = [];
+  const cur = data.weeks[selectedWeekIdx];
+  const prev = selectedWeekIdx > 0 ? data.weeks[selectedWeekIdx - 1] : null;
+  const last4 = data.weeks.slice(Math.max(0, selectedWeekIdx - 3), selectedWeekIdx + 1);
+  const push = (type, priority, text, action) => insights.push({ type, priority, text, action: action || '' });
+
+  if (prev) {
+    const sWOW = calcWOW(cur.sessions, prev.sessions);
+    const rWOW = calcWOW(cur.revenue, prev.revenue);
+    const aWOW = calcWOW(cur.adSpend, prev.adSpend);
+    const cvrChange = cur.cvr - prev.cvr;
+    if (rWOW !== null && rWOW < -0.5) push('bad', 1, '매출 ' + (rWOW*100).toFixed(0) + '% 급락 — 광고비(' + (aWOW*100).toFixed(0) + '%) 변동 연동', '광고비 회복 또는 전환율 개선 시급');
+    else if (rWOW !== null && rWOW < -0.2) push('warn', 2, '매출 ' + (rWOW*100).toFixed(0) + '% 감소', '채널별 ROAS 점검');
+    else if (rWOW !== null && rWOW > 0.3) push('good', 5, '매출 +' + (rWOW*100).toFixed(0) + '% 상승 — 성장 추세', '효과 캠페인 식별 후 지속');
+    if (sWOW !== null && sWOW < -0.15) push('warn', 2, '방문수 ' + (sWOW*100).toFixed(0) + '% 급감', '광고 노출량 / PR / 신규 콘텐츠 점검');
+    if (cvrChange > 0.005) push('good', 4, 'CVR ' + PCT(prev.cvr) + ' → ' + PCT(cur.cvr) + ' 상승', '이번 주 효과 액션 지속');
+    else if (cvrChange < -0.005) push('warn', 3, 'CVR ' + PCT(prev.cvr) + ' → ' + PCT(cur.cvr) + ' 하락', '광고 타겟팅 점검');
+    const curAOV = cur.orders > 0 ? cur.revenue / cur.orders : 0;
+    const prevAOV = prev.orders > 0 ? prev.revenue / prev.orders : 0;
+    if (curAOV > 0 && prevAOV > 0) {
+      const ac = (curAOV - prevAOV) / prevAOV;
+      if (ac < -0.2) push('warn', 3, '객단가 ' + KRW(prevAOV) + ' → ' + KRW(curAOV) + ' (' + (ac*100).toFixed(0) + '%) 하락', '할인/저가 의존 점검');
+      else if (ac > 0.15) push('good', 4, '객단가 ' + KRW(prevAOV) + ' → ' + KRW(curAOV) + ' (+' + (ac*100).toFixed(0) + '%) 상승', '프리미엄 상품 노출 확대');
+    }
+  }
+
+  const weekLabel = getWeekLabel();
+  const weekChannels = getChannelsForWeek(weekLabel) || [];
+
+  weekChannels.forEach(c => {
+    if (c.status === 'critical') { const r = c.roas !== null ? (c.roas * 100).toFixed(0) + '%' : '?'; push('bad', 1, c.name + ' ROAS ' + r + ' — 효율 붕괴, 광고비 ' + KRW(c.adSpend) + ' 회수 불가', c.roas < 1 ? '광고 일시 중단 + 캠페인 재검토' : '소재/타겟 점검'); }
+    else if (c.status === 'good' && c.roas > 3) push('good', 4, c.name + ' ROAS ' + (c.roas * 100).toFixed(0) + '% — 효율 우수', '예산 ' + (c.roas > 4 ? '50%' : '30%') + ' 확대 검토');
+  });
+
+  const totalRev = weekChannels.reduce((s, c) => s + (c.revenue || 0), 0);
+  const totalAd = weekChannels.reduce((s, c) => s + (c.adSpend || 0), 0);
+  if (totalAd > 0 && totalRev > 0) {
+    const o = totalRev / totalAd;
+    if (o < 1) push('bad', 1, '전체 MER ' + (o * 100).toFixed(0) + '% — 광고비가 매출 초과 (적자)', '비효율 채널 정리 우선');
+    else if (o < 2) push('warn', 2, '전체 MER ' + (o * 100).toFixed(0) + '% — 손익분기점 근처', '채널별 효율 격차 분석 후 예산 재배분');
+    else if (o > 3) push('good', 4, '전체 MER ' + (o * 100).toFixed(0) + '% — 광고 효율 양호', '예산 확대 시 수익 증가 가능');
+  }
+
+  const direct = weekChannels.find(c => c.name.includes('직접') || c.name.toLowerCase().includes('direct'));
+  if (direct) {
+    if (direct.share > 0.5) push('warn', 3, '직접유입 ' + (direct.share*100).toFixed(0) + '% — UTM 누락 / PG 추적 의심', '광고/PR UTM 점검');
+    else if (direct.share < 0.15 && data.weeks.length > 3) push('warn', 4, '직접유입 ' + (direct.share*100).toFixed(0) + '% — 브랜드 인지도 부족', 'PR/브랜딩 강화 필요');
+  }
+
+  const fh = data.funnelHistory || [];
+  const f = fh.length > 0 ? fh[fh.length - 1] : null;
+  if (f && f.sessions > 0) {
+    const c1 = f.sessions > 0 ? f.productViews / f.sessions : 0;
+    const c2 = f.productViews > 0 ? f.addToCarts / f.productViews : 0;
+    const c3 = f.addToCarts > 0 ? f.purchases / f.addToCarts : 0;
+    const stages = [
+      { name: '사이트 → 상품 조회', conv: c1, min: 0.40, max: 0.60, lost: f.sessions - f.productViews, action: '메인 페이지 매력도 / CTA / 신상 노출' },
+      { name: '상품 조회 → 장바구니', conv: c2, min: 0.05, max: 0.10, lost: f.productViews - f.addToCarts, action: '상세페이지 개편 — 모델 착장, 사이즈, 리뷰' },
+      { name: '장바구니 → 구매', conv: c3, min: 0.30, max: 0.50, lost: f.addToCarts - f.purchases, action: '결제 UX — 배송비, 비회원결제' }
+    ];
+    const weakest = stages.reduce((w, s) => { const r = s.min > 0 ? s.conv/s.min : 1; return !w || r < w.ratio ? { ...s, ratio: r } : w; }, null);
+    if (weakest && weakest.conv < weakest.min * 0.5) push('bad', 1, '퍼널 누수 — "' + weakest.name + '" 전환율 ' + (weakest.conv*100).toFixed(1) + '%, 이탈 ' + NUM(weakest.lost) + '명', weakest.action);
+    else if (weakest && weakest.conv < weakest.min) push('warn', 3, '퍼널 약점 — "' + weakest.name + '" 전환율 ' + (weakest.conv*100).toFixed(1) + '%', weakest.action);
+    const strongest = stages.find(s => s.conv > s.max);
+    if (strongest) push('good', 5, '"' + strongest.name + '" 전환율 ' + (strongest.conv*100).toFixed(1) + '% — 벤치마크 상회', '이 단계 강점 유지');
+    if (f.sessions < 200) push('warn', 2, '주차 사이트 접속 ' + NUM(f.sessions) + '명 — 트래픽 자체 부족', '전환 최적화보다 유입 확보 우선');
+  }
+
+  if (data.topProducts && data.topProducts.length > 0) {
+    const t = data.topProducts.reduce((s, p) => s + p.revenue, 0);
+    if (t > 0) { const top = data.topProducts[0].revenue / t; if (top > 0.6) push('warn', 3, '베스트셀러 1개가 매출 ' + (top*100).toFixed(0) + '% 차지', '신상 또는 다른 상품 광고 강화'); }
+  }
+
+  if (last4.length >= 4) {
+    const t = last4.map(w => w.revenue);
+    let d = 0; for (let i = 1; i < t.length; i++) if (t[i] < t[i-1]) d++;
+    if (d === 3) push('bad', 1, '매출 4주 연속 감소 추세', '구조적 문제 점검 — 광고/상품/시즌');
+    else if (d === 0 && t[3] > t[0] * 1.2) push('good', 5, '매출 4주 연속 상승 (+' + (((t[3]-t[0])/t[0])*100).toFixed(0) + '%)', '성장 모멘텀 유지');
+  }
+
+  if (data.brandSearch && data.brandSearch.length >= 2) {
+    const cv = data.brandSearch[data.brandSearch.length - 1].volume;
+    const pv = data.brandSearch[data.brandSearch.length - 2].volume;
+    if (pv > 0) { const ch = (cv - pv) / pv; if (ch > 0.2) push('good', 4, '브랜드 검색량 +' + (ch*100).toFixed(0) + '% 상승 — PR 효과 발현', 'PR 매체 확대 검토'); else if (ch < -0.2) push('warn', 4, '브랜드 검색량 ' + (ch*100).toFixed(0) + '% 하락', 'PR/광고 노출량 점검'); }
+  }
+
+  insights.sort((a, b) => (a.priority || 9) - (b.priority || 9));
+  document.getElementById('insights').innerHTML = insights.slice(0, 8).map(ins => {
+    const cls = ins.type === 'good' ? 'icon-good' : ins.type === 'warn' ? 'icon-warn' : 'icon-bad';
+    const ic = ins.type === 'good' ? '✓' : '!';
+    return '<div class="insight"><div class="insight-icon ' + cls + '">' + ic + '</div><div style="flex:1"><div class="insight-text">' + ins.text + '</div>' + (ins.action ? '<div class="insight-action">' + ins.action + '</div>' : '') + '</div></div>';
+  }).join('') || '<div style="color:var(--text-3); font-size:13px; padding: 10px;">분석할 데이터가 부족해요.</div>';
+}
+
+function renderFunnel() {
+  const hist = data.funnelHistory || [];
+  const week = getWeekLabel();
+  const container = document.getElementById('funnel-container');
+
+  if (hist.length === 0) {
+    container.innerHTML = '<div style="color:var(--text-3); font-size:13px; padding: 20px;">퍼널 데이터가 없어요.</div>';
+    document.getElementById('funnel-week').textContent = '';
+    document.getElementById('funnel-compare').textContent = '';
+    renderFunnelTrend();
+    return;
+  }
+
+  // 선택된 주차의 퍼널, 없으면 가장 최근
+  const fIdx = hist.findIndex(h => h.week === week);
+  const f = fIdx >= 0 ? hist[fIdx] : hist[hist.length - 1];
+  const prev = fIdx > 0 ? hist[fIdx - 1] : (fIdx < 0 && hist.length > 1 ? hist[hist.length - 2] : null);
+
+  document.getElementById('funnel-week').textContent = f.week || '';
+  document.getElementById('funnel-compare').textContent = prev ? ('  (vs ' + prev.week + ')') : '';
+
+  const steps = [
+    { name: '사이트 접속', value: f.sessions },
+    { name: '상품 조회', value: f.productViews, bench: { min: 0.40, max: 0.60, label: '벤치마크 40~60%' } },
+    { name: '장바구니 담기', value: f.addToCarts, bench: { min: 0.05, max: 0.10, label: '벤치마크 5~10%' } },
+    { name: '구매 완료', value: f.purchases, bench: { min: 0.30, max: 0.50, label: '벤치마크 30~50%' } }
+  ];
+  const prevVals = prev ? [prev.sessions, prev.productViews, prev.addToCarts, prev.purchases] : null;
+
+  const total = steps[0].value || 1;
+  let html = '';
+  steps.forEach((s, i) => {
+    const pct = s.value / total;
+    const w = Math.max(pct * 100, 3);
+    html += '<div class="funnel-step"><div class="funnel-step-label"><div class="funnel-step-title">단계 ' + (i+1) + ': ' + s.name + '</div><div class="funnel-step-sub">전체의 ' + (pct*100).toFixed(1) + '%</div></div><div class="funnel-bar-wrap"><div class="funnel-bar-fill" style="width:' + w + '%"><span class="funnel-bar-text">' + NUM(s.value) + '명</span></div></div><div class="funnel-step-value"><div class="funnel-value-num">' + NUM(s.value) + '</div><div class="funnel-value-pct">' + (pct*100).toFixed(1) + '%</div></div></div>';
+    if (i < steps.length - 1) {
+      const n = steps[i+1];
+      const conv = s.value > 0 ? n.value / s.value : 0;
+      const drop = 1 - conv;
+      let cls = 'rate-ok';
+      if (n.bench) { if (conv >= n.bench.min) cls = 'rate-good'; else if (conv < n.bench.min * 0.5) cls = 'rate-bad'; }
+      let changeHtml = '';
+      if (prevVals && prevVals[i] > 0) {
+        const prevConv = prevVals[i+1] / prevVals[i];
+        const diff = conv - prevConv;
+        if (Math.abs(diff) >= 0.001) {
+          const up = diff > 0;
+          changeHtml = '<span style="color:' + (up ? 'var(--good)' : 'var(--bad)') + '; font-weight:700; font-size:10.5px;">' + (up ? '▲' : '▼') + ' ' + Math.abs(diff*100).toFixed(1) + 'p</span>';
+        } else {
+          changeHtml = '<span style="color:var(--text-3); font-size:10.5px;">— 0.0p</span>';
+        }
+      }
+      html += '<div class="funnel-arrow"><span class="funnel-rate ' + cls + '">전환 ' + (conv*100).toFixed(1) + '%</span>' + changeHtml + '<span class="funnel-leak">이탈 ' + NUM(s.value - n.value) + '명 (' + (drop*100).toFixed(1) + '%)</span><div class="funnel-arrow-line"></div>' + (n.bench ? '<span class="funnel-bench">' + n.bench.label + '</span>' : '') + '</div>';
+    }
+  });
+  container.innerHTML = html;
+  renderFunnelTrend();
+}
+
+function renderFunnelTrend() {
+  if (charts['funnel-trend']) { charts['funnel-trend'].destroy(); delete charts['funnel-trend']; }
+  const hist = data.funnelHistory || [];
+  const canvas = document.getElementById('chart-funnel-trend');
+  if (!canvas || hist.length === 0) return;
+  const gridColor = '#F0EFED';
+  const textColor = '#A8A29E';
+  const labels = hist.map(h => h.week);
+  const conv1 = hist.map(h => h.sessions > 0 ? (h.productViews / h.sessions * 100) : 0);
+  const conv2 = hist.map(h => h.productViews > 0 ? (h.addToCarts / h.productViews * 100) : 0);
+  const conv3 = hist.map(h => h.addToCarts > 0 ? (h.purchases / h.addToCarts * 100) : 0);
+
+  charts['funnel-trend'] = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: '사이트→상품', data: conv1, borderColor: '#3B82F6', backgroundColor: 'transparent', borderWidth: 2.5, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#3B82F6' },
+        { label: '상품→장바구니', data: conv2, borderColor: '#EC4899', backgroundColor: 'transparent', borderWidth: 2.5, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#EC4899' },
+        { label: '장바구니→구매', data: conv3, borderColor: '#10B981', backgroundColor: 'transparent', borderWidth: 2.5, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#10B981' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#57534E', font: { size: 11, weight: '500' }, usePointStyle: true, pointStyle: 'circle', padding: 12, boxWidth: 6 } },
+        tooltip: { backgroundColor: '#1C1917', padding: 10, titleColor: '#fff', bodyColor: '#E7E5E4', borderWidth: 0, callbacks: { label: (c) => c.dataset.label + ': ' + c.parsed.y.toFixed(1) + '%' } }
+      },
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 11 } } },
+        y: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 11 }, callback: v => v + '%' } }
+      }
+    }
+  });
+}
+
+function renderCharts() {
+  ['trend', 'donut-ad', 'brand'].forEach(k => { if (charts[k]) { charts[k].destroy(); delete charts[k]; } });
+  const gridColor = '#F0EFED';
+  const textColor = '#A8A29E';
+
+  charts.trend = new Chart(document.getElementById('chart-trend'), {
+    type: 'line',
+    data: {
+      labels: data.weeks.map(w => w.week),
+      datasets: [
+        { label: '매출', data: data.weeks.map(w => w.revenue), borderColor: '#3B82F6', backgroundColor: 'rgba(59,130,246,0.10)', borderWidth: 2.5, fill: true, tension: 0.4, yAxisID: 'y', pointRadius: 3, pointBackgroundColor: '#3B82F6' },
+        { label: '광고비', data: data.weeks.map(w => w.adSpend), borderColor: '#EC4899', backgroundColor: 'transparent', borderWidth: 2, fill: false, tension: 0.4, yAxisID: 'y', pointRadius: 2, pointBackgroundColor: '#EC4899', borderDash: [5, 3] },
+        { label: '방문수', data: data.weeks.map(w => w.sessions), borderColor: '#10B981', backgroundColor: 'transparent', borderWidth: 2, fill: false, tension: 0.4, yAxisID: 'y1', pointRadius: 2, pointBackgroundColor: '#10B981' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#57534E', font: { size: 12, weight: '500' }, usePointStyle: true, pointStyle: 'circle', padding: 16 } },
+        tooltip: { backgroundColor: '#1C1917', padding: 12, titleColor: '#fff', bodyColor: '#E7E5E4', borderWidth: 0, callbacks: { label: (c) => c.dataset.label + ': ' + (c.datasetIndex === 2 ? NUM(c.parsed.y) : KRW(c.parsed.y)) } }
+      },
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 11 } } },
+        y: { position: 'left', grid: { color: gridColor }, ticks: { color: textColor, font: { size: 11 }, callback: v => v >= 10000 ? (v/10000).toFixed(0) + '만' : v } },
+        y1: { position: 'right', grid: { drawOnChartArea: false }, ticks: { color: textColor, font: { size: 11 } } }
+      }
+    }
+  });
+
+  const adChannels = (getChannelsForWeek(getWeekLabel()) || []).filter(c => (c.adSpend || 0) > 0);
+  const totalAd = adChannels.reduce((s, c) => s + c.adSpend, 0);
+  charts['donut-ad'] = new Chart(document.getElementById('chart-donut-ad'), {
+    type: 'doughnut',
+    data: { labels: adChannels.map(c => c.name), datasets: [{ data: adChannels.map(c => c.adSpend), backgroundColor: adChannels.map((_, i) => COLORS_DONUT[i % COLORS_DONUT.length]), borderColor: '#fff', borderWidth: 3 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1C1917', padding: 10, titleColor: '#fff', bodyColor: '#E7E5E4', borderWidth: 0, callbacks: { label: (c) => c.label + ': ' + KRW(c.parsed) + ' (' + ((c.parsed/totalAd)*100).toFixed(1) + '%)' } } } }
+  });
+  document.getElementById('donut-center-ad').innerHTML = '<div class="donut-center-value">' + KRW(totalAd) + '</div><div class="donut-center-label">총 광고비</div>';
+  document.getElementById('donut-legend-ad').innerHTML = adChannels.length > 0 ? adChannels.map((c, i) =>
+    '<div class="dark-legend-row"><div class="dark-legend-left"><span class="dot" style="background:' + COLORS_DONUT[i % COLORS_DONUT.length] + '"></span>' + c.name + '</div><div><span class="dark-legend-value">' + ((c.adSpend/totalAd)*100).toFixed(1) + '%</span><span class="dark-legend-amt">' + KRW(c.adSpend) + '</span></div></div>'
+  ).join('') : '<div style="color:var(--text-3); font-size:12px; padding: 10px; text-align:center;">광고비 데이터 없음</div>';
+
+  charts.brand = new Chart(document.getElementById('chart-brand'), {
+    type: 'line',
+    data: { labels: data.brandSearch.map(b => b.week), datasets: [{ label: '검색량', data: data.brandSearch.map(b => b.volume), borderColor: '#10B981', backgroundColor: 'rgba(16,185,129,0.10)', borderWidth: 2.5, fill: true, tension: 0.4, pointBackgroundColor: '#10B981', pointRadius: 3 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1C1917', padding: 10, titleColor: '#fff', bodyColor: '#E7E5E4' } }, scales: { x: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 11 } } }, y: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 11 } } } } }
+  });
+}
+
+function renderProducts() {
+  const max = Math.max(...data.topProducts.map(p => p.revenue), 1);
+  document.getElementById('products').innerHTML = data.topProducts.map((p, i) => {
+    const pct = (p.revenue / max) * 100; const color = COLORS[i % COLORS.length];
+    return '<div class="product-row"><div class="product-line"><span class="product-name">' + p.name + '</span><span class="product-revenue">' + KRW(p.revenue) + '</span></div><div class="bar-bg"><div class="bar-fill" style="width:' + pct + '%; background:' + color + '"></div></div></div>';
+  }).join('');
+}
+
+function aggregateTraffic(arr, key) {
+  const map = {};
+  arr.forEach(t => {
+    const k = t[key] || '미분류';
+    if (!map[k]) map[k] = { name: k, sessions: 0, revenue: 0, orders: 0 };
+    map[k].sessions += (t.sessions || 0);
+    map[k].revenue += (t.revenue || 0);
+    map[k].orders += (t.orders || 0);
+  });
+  return Object.values(map).sort((a, b) => b.sessions - a.sessions);
+}
+
+function renderTrafficBars(elId, items) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (items.length === 0) { el.innerHTML = '<div style="color:var(--text-3); font-size:12px; padding:10px;">데이터 없음</div>'; return; }
+  const maxSessions = Math.max(...items.map(i => i.sessions), 1);
+  el.innerHTML = items.map((it, idx) => {
+    const w = Math.max((it.sessions / maxSessions) * 100, 2);
+    const color = COLORS[idx % COLORS.length];
+    const revText = it.revenue > 0 ? '<b>' + KRW(it.revenue) + '</b>' : '매출 -';
+    return '<div class="traffic-row"><div class="traffic-line"><span class="traffic-name">' + it.name + '</span><span class="traffic-meta">' + NUM(it.sessions) + ' 방문 · ' + revText + '</span></div><div class="bar-bg"><div class="bar-fill" style="width:' + w + '%; background:' + color + '"></div></div></div>';
+  }).join('');
+}
+
+function renderTrafficMix(elId, allTraffic) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (!allTraffic || allTraffic.length === 0) { el.innerHTML = '<div style="color:var(--text-3); font-size:12px; padding:10px;">데이터 없음</div>'; return; }
+  const totalRev = allTraffic.reduce((s, t) => s + (t.revenue || 0), 0);
+  const mix = [...allTraffic].sort((a, b) => (b.revenue - a.revenue) || (b.sessions - a.sessions)).slice(0, 5);
+  const maxRev = Math.max(...mix.map(m => m.revenue), 1);
+  el.innerHTML = mix.map((m, i) => {
+    const revShare = totalRev > 0 ? (m.revenue / totalRev) * 100 : 0;
+    const w = m.revenue > 0 ? Math.max((m.revenue / maxRev) * 100, 2) : 2;
+    const rpv = m.sessions > 0 ? m.revenue / m.sessions : 0;
+    const cvr = m.sessions > 0 ? (m.orders / m.sessions) * 100 : 0;
+    const rankCls = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : '';
+    const color = i === 0 ? '#C8A567' : COLORS[(i+1) % COLORS.length];
+    const shareText = m.revenue > 0 ? '<span class="mix-share">(' + revShare.toFixed(1) + '%)</span>' : '';
+    return '<div class="mix-row"><div class="mix-rank ' + rankCls + '">' + (i+1) + '</div><div class="mix-body">' +
+      '<div class="mix-line"><span class="mix-name">' + m.type + '<span class="mix-x">×</span>' + m.platform + '</span><span class="mix-rev">' + (m.revenue > 0 ? KRW(m.revenue) : '매출 -') + ' ' + shareText + '</span></div>' +
+      '<div class="bar-bg"><div class="bar-fill" style="width:' + w + '%; background:' + color + '"></div></div>' +
+      '<div class="mix-meta">방문 <b>' + NUM(m.sessions) + '</b> · 주문 <b>' + NUM(m.orders) + '</b> · 방문당 매출 <b>' + KRW(Math.round(rpv)) + '</b> · 전환율 <b>' + cvr.toFixed(1) + '%</b></div>' +
+    '</div></div>';
+  }).join('');
+}
+
+function renderMetaCreatives(elId, creatives) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (!creatives || creatives.length === 0) { el.innerHTML = '<div style="color:var(--text-3); font-size:12px; padding:10px;">데이터 없음 — 데이터 업데이트에서 메타 소재를 입력하세요</div>'; return; }
+  const totalRev = creatives.reduce((s, c) => s + (c.revenue || 0), 0);
+  const top = [...creatives].sort((a, b) => (b.revenue - a.revenue) || (b.sessions - a.sessions)).slice(0, 5);
+  const maxRev = Math.max(...top.map(m => m.revenue), 1);
+  el.innerHTML = top.map((m, i) => {
+    const revShare = totalRev > 0 ? (m.revenue / totalRev) * 100 : 0;
+    const w = m.revenue > 0 ? Math.max((m.revenue / maxRev) * 100, 2) : 2;
+    const rankCls = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : '';
+    const color = i === 0 ? '#C8A567' : COLORS[(i+1) % COLORS.length];
+    const shareText = m.revenue > 0 ? '<span class="mix-share">(' + revShare.toFixed(1) + '%)</span>' : '';
+    const roas = (m.adSpend || 0) > 0 ? (m.revenue / m.adSpend) : null;
+    const roasText = roas === null ? '-' : (roas * 100).toFixed(0) + '%';
+    const roasColor = roas === null ? 'var(--text-2)' : (roas < 1 ? 'var(--bad)' : roas < 2 ? 'var(--text-2)' : 'var(--good)');
+    const ctrText = (m.ctr || 0) > 0 ? (m.ctr * 100).toFixed(1) + '%' : '-';
+    return '<div class="mix-row"><div class="mix-rank ' + rankCls + '">' + (i+1) + '</div><div class="mix-body">' +
+      '<div class="mix-line"><span class="mix-name">' + m.name + '</span><span class="mix-rev">' + (m.revenue > 0 ? KRW(m.revenue) : '매출 -') + ' ' + shareText + '</span></div>' +
+      '<div class="bar-bg"><div class="bar-fill" style="width:' + w + '%; background:' + color + '"></div></div>' +
+      '<div class="mix-meta">유입 <b>' + NUM(m.sessions) + '</b> · 신규 <b>' + NUM(m.newUsers) + '</b> · 구매 <b>' + NUM(m.orders) + '</b> · 집행 <b>' + (m.adSpend > 0 ? KRW(m.adSpend) : '-') + '</b> · CTR <b>' + ctrText + '</b> · ROAS <b style="color:' + roasColor + '">' + roasText + '</b></div>' +
+    '</div></div>';
+  }).join('');
+}
+
+function renderTrafficMonthly() {
+  const el = document.getElementById('traffic-monthly-table');
+  if (!el) return;
+
+  // weeks에서 week → month 매핑
+  const weekToMonth = {};
+  data.weeks.forEach(w => { if (w.month) weekToMonth[w.week] = w.month; });
+
+  // trafficHistory를 월별로 집계
+  const monthMap = {};
+  (data.trafficHistory || []).forEach(h => {
+    const month = weekToMonth[h.week] || '미분류';
+    if (!monthMap[month]) monthMap[month] = { month, sessions: 0, revenue: 0, orders: 0, platformMap: {}, typeMap: {} };
+    const m = monthMap[month];
+    (h.traffic || []).forEach(t => {
+      m.sessions += t.sessions || 0;
+      m.revenue += t.revenue || 0;
+      m.orders += t.orders || 0;
+      const p = t.platform || '기타';
+      const ty = t.type || '기타';
+      if (!m.platformMap[p]) m.platformMap[p] = { sessions: 0, revenue: 0 };
+      m.platformMap[p].sessions += t.sessions || 0;
+      m.platformMap[p].revenue += t.revenue || 0;
+      if (!m.typeMap[ty]) m.typeMap[ty] = { sessions: 0, revenue: 0 };
+      m.typeMap[ty].sessions += t.sessions || 0;
+      m.typeMap[ty].revenue += t.revenue || 0;
+    });
+  });
+
+  const monthly = Object.values(monthMap).sort((a, b) => a.month.localeCompare(b.month));
+
+  if (monthly.length === 0) {
+    el.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-3);font-size:13px;">데이터 없음 — 주차별 유입 데이터와 월(month) 필드를 입력하면 자동으로 집계돼요</td></tr>';
+    return;
+  }
+
+  // 연도 구분선 포함
+  let prevYear = null;
+  el.innerHTML = monthly.map(m => {
+    const year = m.month !== '미분류' ? m.month.slice(0, 4) : '미분류';
+    let yearHeader = '';
+    if (year !== prevYear) {
+      prevYear = year;
+      yearHeader = '<tr><td colspan="7" style="padding:10px 10px 5px;font-size:11px;font-weight:800;color:var(--text-3);letter-spacing:0.08em;text-transform:uppercase;border-bottom:2px solid var(--border-strong);background:var(--surface-2);">' + (year !== '미분류' ? year + '년' : '월 미입력') + '</td></tr>';
+    }
+    const topPlatform = Object.entries(m.platformMap).sort((a, b) => b[1].sessions - a[1].sessions)[0];
+    const topType = Object.entries(m.typeMap).sort((a, b) => b[1].sessions - a[1].sessions)[0];
+    const rpv = m.sessions > 0 ? Math.round(m.revenue / m.sessions) : 0;
+    const revStyle = m.revenue > 0 ? 'font-weight:700;color:var(--text)' : 'color:var(--text-3)';
+    return yearHeader + '<tr>' +
+      '<td><span class="month-badge">' + m.month + '</span></td>' +
+      '<td class="right">' + NUM(m.sessions) + '</td>' +
+      '<td class="right" style="' + revStyle + '">' + KRW(m.revenue) + '</td>' +
+      '<td class="right">' + NUM(m.orders) + '</td>' +
+      '<td class="right">' + (rpv > 0 ? KRW(rpv) : '-') + '</td>' +
+      '<td>' + (topPlatform ? '<span class="badge badge-neutral">' + topPlatform[0] + '</span>' : '-') + '</td>' +
+      '<td>' + (topType ? '<span class="badge badge-neutral">' + topType[0] + '</span>' : '-') + '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+function renderTraffic() {
+  const week = getWeekLabel();
+  const traffic = getTrafficForWeek(week) || [];
+  renderTrafficBars('traffic-platform', aggregateTraffic(traffic, 'platform'));
+  renderTrafficBars('traffic-type', aggregateTraffic(traffic, 'type'));
+  renderTrafficMix('traffic-mix', traffic);
+  renderMetaCreatives('meta-creatives', getCreativesForWeek(week));
+  renderTrafficMonthly();
+}
+
+function openModal() {
+  const week = getWeekLabel();
+  if (!formChannelWeek) formChannelWeek = week;
+  if (!formTrafficWeek) formTrafficWeek = week;
+  if (!formCreativeWeek) formCreativeWeek = week;
+  renderForm();
+  document.getElementById('modal').classList.add('active');
+}
+function closeModal() { document.getElementById('modal').classList.remove('active'); }
+
+function renderForm() {
+  const TYPE_OPTS = ['오가닉 검색', '유료 검색', '유료 소셜', '오가닉 소셜', '직접 유입', '추천(PR)', '이메일', '기타'];
+
+  // 주차별 핵심 지표
+  document.getElementById('form-weeks').innerHTML = data.weeks.map((w, i) =>
+    '<tr><td><input class="form-input" style="width:72px" value="' + w.week + '" onchange="updateWeek(' + i + ',\'week\',this.value)"></td>' +
+    '<td><input class="form-input" style="width:90px" value="' + (w.month||'') + '" placeholder="2025-06" onchange="updateWeek(' + i + ',\'month\',this.value)"></td>' +
+    '<td><input type="number" class="form-input right" style="width:88px" value="' + w.sessions + '" onchange="updateWeek(' + i + ',\'sessions\',this.value)"></td>' +
+    '<td><input type="number" class="form-input right" style="width:88px" value="' + w.newUsers + '" onchange="updateWeek(' + i + ',\'newUsers\',this.value)"></td>' +
+    '<td><input type="number" class="form-input right" style="width:105px" value="' + w.revenue + '" onchange="updateWeek(' + i + ',\'revenue\',this.value)"></td>' +
+    '<td><input type="number" class="form-input right" style="width:65px" value="' + w.orders + '" onchange="updateWeek(' + i + ',\'orders\',this.value)"></td>' +
+    '<td><input type="number" class="form-input right" style="width:105px" value="' + w.adSpend + '" onchange="updateWeek(' + i + ',\'adSpend\',this.value)"></td>' +
+    '<td><input type="number" step="0.0001" class="form-input right" style="width:78px" value="' + w.cvr + '" onchange="updateWeek(' + i + ',\'cvr\',this.value)"></td>' +
+    '<td><button class="row-delete" onclick="removeWeek(' + i + ')">×</button></td></tr>'
+  ).join('');
+
+  // 채널별 성과 — 주차 선택 드롭다운
+  const chWeekSel = document.getElementById('form-ch-week');
+  if (chWeekSel) {
+    chWeekSel.innerHTML = data.weeks.map(w => {
+      const hasData = (data.channelHistory || []).some(h => h.week === w.week);
+      return '<option value="' + w.week + '"' + (w.week === formChannelWeek ? ' selected' : '') + '>' + w.week + (hasData ? '' : ' (미입력)') + '</option>';
+    }).join('');
+    if (!formChannelWeek) formChannelWeek = data.weeks[data.weeks.length-1].week;
+    chWeekSel.value = formChannelWeek;
+  }
+  const chEntry = (data.channelHistory || []).find(h => h.week === formChannelWeek);
+  const chList = chEntry ? chEntry.channels : [];
+  document.getElementById('form-channels').innerHTML = chList.length === 0
+    ? '<tr><td colspan="9" style="color:var(--text-3);text-align:center;padding:12px;font-size:12px;">' + formChannelWeek + ' 채널 데이터 없음 — 채널 추가 버튼으로 입력하세요</td></tr>'
+    : chList.map((c, i) => {
+      const m = computeChannelMetrics(c);
+      const roasDisplay = m.roas !== null ? (m.roas * 100).toFixed(0) + '%' : '-';
+      const statusBadgeCls = m.status === 'critical' ? 'badge-bad' : m.status === 'good' ? 'badge-good' : 'badge-neutral';
+      const statusLabel = { good: '양호', neutral: '중립', critical: '위험' }[m.status];
+      return '<tr><td><input class="form-input" style="width:110px" value="' + c.name + '" onchange="updateChannel(' + i + ',\'name\',this.value,\'string\')"></td>' +
+      '<td><input type="number" class="form-input right" style="width:88px" value="' + c.sessions + '" onchange="updateChannel(' + i + ',\'sessions\',this.value)"></td>' +
+      '<td><input type="number" step="0.001" class="form-input right" style="width:78px" value="' + c.share + '" onchange="updateChannel(' + i + ',\'share\',this.value)"></td>' +
+      '<td><input type="number" class="form-input right" style="width:105px" value="' + c.adSpend + '" onchange="updateChannel(' + i + ',\'adSpend\',this.value)"></td>' +
+      '<td><input type="number" class="form-input right" style="width:105px" value="' + c.revenue + '" onchange="updateChannel(' + i + ',\'revenue\',this.value)"></td>' +
+      '<td><input type="number" class="form-input right" style="width:65px" value="' + c.orders + '" onchange="updateChannel(' + i + ',\'orders\',this.value)"></td>' +
+      '<td class="right"><span class="badge ' + statusBadgeCls + '">' + roasDisplay + '</span></td>' +
+      '<td class="right"><span class="badge ' + statusBadgeCls + '">' + statusLabel + '</span></td>' +
+      '<td><button class="row-delete" onclick="removeChannel(' + i + ')">×</button></td></tr>';
+    }).join('');
+
+  // 퍼널
+  const fHist = data.funnelHistory || [];
+  document.getElementById('form-funnel').innerHTML = fHist.map((f, i) =>
+    '<tr><td><input class="form-input" style="width:80px" value="' + f.week + '" onchange="updateFunnelHist(' + i + ',\'week\',this.value,\'string\')"></td>' +
+    '<td><input type="number" class="form-input right" style="width:100px" value="' + f.sessions + '" onchange="updateFunnelHist(' + i + ',\'sessions\',this.value)"></td>' +
+    '<td><input type="number" class="form-input right" style="width:100px" value="' + f.productViews + '" onchange="updateFunnelHist(' + i + ',\'productViews\',this.value)"></td>' +
+    '<td><input type="number" class="form-input right" style="width:100px" value="' + f.addToCarts + '" onchange="updateFunnelHist(' + i + ',\'addToCarts\',this.value)"></td>' +
+    '<td><input type="number" class="form-input right" style="width:100px" value="' + f.purchases + '" onchange="updateFunnelHist(' + i + ',\'purchases\',this.value)"></td>' +
+    '<td><button class="row-delete" onclick="removeFunnelWeek(' + i + ')">×</button></td></tr>'
+  ).join('');
+
+  // 유입 — 주차 선택 드롭다운
+  const trWeekSel = document.getElementById('form-tr-week');
+  if (trWeekSel) {
+    trWeekSel.innerHTML = data.weeks.map(w => {
+      const hasData = (data.trafficHistory || []).some(h => h.week === w.week);
+      return '<option value="' + w.week + '"' + (w.week === formTrafficWeek ? ' selected' : '') + '>' + w.week + (hasData ? '' : ' (미입력)') + '</option>';
+    }).join('');
+    if (!formTrafficWeek) formTrafficWeek = data.weeks[data.weeks.length-1].week;
+    trWeekSel.value = formTrafficWeek;
+  }
+  const trEntry = (data.trafficHistory || []).find(h => h.week === formTrafficWeek);
+  const trList = trEntry ? trEntry.traffic : [];
+  document.getElementById('form-traffic').innerHTML = trList.length === 0
+    ? '<tr><td colspan="6" style="color:var(--text-3);text-align:center;padding:12px;font-size:12px;">' + formTrafficWeek + ' 유입 데이터 없음 — 행 추가 버튼으로 입력하세요</td></tr>'
+    : trList.map((t, i) => {
+        const typeSelect = '<select class="form-input" onchange="updateTraffic(' + i + ',\'type\',this.value,\'string\')">' +
+          TYPE_OPTS.map(o => '<option value="' + o + '"' + (t.type === o ? ' selected' : '') + '>' + o + '</option>').join('') +
+          (TYPE_OPTS.indexOf(t.type) === -1 ? '<option value="' + t.type + '" selected>' + t.type + '</option>' : '') +
+          '</select>';
+        return '<tr><td><input class="form-input" style="width:100px" value="' + t.platform + '" onchange="updateTraffic(' + i + ',\'platform\',this.value,\'string\')"></td>' +
+          '<td>' + typeSelect + '</td>' +
+          '<td><input type="number" class="form-input right" style="width:90px" value="' + t.sessions + '" onchange="updateTraffic(' + i + ',\'sessions\',this.value)"></td>' +
+          '<td><input type="number" class="form-input right" style="width:110px" value="' + t.revenue + '" onchange="updateTraffic(' + i + ',\'revenue\',this.value)"></td>' +
+          '<td><input type="number" class="form-input right" style="width:70px" value="' + t.orders + '" onchange="updateTraffic(' + i + ',\'orders\',this.value)"></td>' +
+          '<td><button class="row-delete" onclick="removeTraffic(' + i + ')">×</button></td></tr>';
+      }).join('');
+
+  // 메타 소재 — 주차 선택 드롭다운
+  const crWeekSel = document.getElementById('form-cr-week');
+  if (crWeekSel) {
+    crWeekSel.innerHTML = data.weeks.map(w => {
+      const hasData = (data.metaCreativeHistory || []).some(h => h.week === w.week);
+      return '<option value="' + w.week + '"' + (w.week === formCreativeWeek ? ' selected' : '') + '>' + w.week + (hasData ? '' : ' (미입력)') + '</option>';
+    }).join('');
+    if (!formCreativeWeek) formCreativeWeek = data.weeks[data.weeks.length-1].week;
+    crWeekSel.value = formCreativeWeek;
+  }
+  const crEntry = (data.metaCreativeHistory || []).find(h => h.week === formCreativeWeek);
+  const crList = crEntry ? crEntry.creatives : [];
+  document.getElementById('form-creatives').innerHTML = crList.length === 0
+    ? '<tr><td colspan="9" style="color:var(--text-3);text-align:center;padding:12px;font-size:12px;">' + formCreativeWeek + ' 메타 소재 데이터 없음 — 소재 추가 버튼으로 입력하세요</td></tr>'
+    : crList.map((c, i) => {
+        const roas = (c.adSpend || 0) > 0 ? (c.revenue / c.adSpend * 100).toFixed(0) + '%' : '-';
+        return '<tr><td><input class="form-input" style="width:200px;text-align:left" value="' + c.name + '" onchange="updateCreative(' + i + ',\'name\',this.value,\'string\')"></td>' +
+          '<td><input type="number" class="form-input right" style="width:90px" value="' + c.sessions + '" onchange="updateCreative(' + i + ',\'sessions\',this.value)"></td>' +
+          '<td><input type="number" class="form-input right" style="width:90px" value="' + c.newUsers + '" onchange="updateCreative(' + i + ',\'newUsers\',this.value)"></td>' +
+          '<td><input type="number" class="form-input right" style="width:80px" value="' + c.orders + '" onchange="updateCreative(' + i + ',\'orders\',this.value)"></td>' +
+          '<td><input type="number" class="form-input right" style="width:110px" value="' + c.revenue + '" onchange="updateCreative(' + i + ',\'revenue\',this.value)"></td>' +
+          '<td><input type="number" class="form-input right" style="width:110px" value="' + c.adSpend + '" onchange="updateCreative(' + i + ',\'adSpend\',this.value)"></td>' +
+          '<td><input type="number" step="0.1" class="form-input right" style="width:70px" value="' + ((c.ctr||0)*100).toFixed(1) + '" onchange="updateCreative(' + i + ',\'ctr\',this.value,\'pct\')"></td>' +
+          '<td class="right" style="color:var(--text-2);font-size:12px;">' + roas + '</td>' +
+          '<td><button class="row-delete" onclick="removeCreative(' + i + ')">×</button></td></tr>';
+      }).join('');
+
+  // 브랜드 검색
+  document.getElementById('form-brand').innerHTML = data.brandSearch.map((b, i) =>
+    '<tr><td><input class="form-input" style="width:80px" value="' + b.week + '" onchange="updateBrand(' + i + ',\'week\',this.value,\'string\')"></td>' +
+    '<td><input type="number" class="form-input right" style="width:100px" value="' + b.volume + '" onchange="updateBrand(' + i + ',\'volume\',this.value)"></td>' +
+    '<td><button class="row-delete" onclick="removeBrand(' + i + ')">×</button></td></tr>'
+  ).join('');
+
+  // 상위 상품
+  document.getElementById('form-products').innerHTML = data.topProducts.map((p, i) =>
+    '<tr><td><input class="form-input" style="width:260px;text-align:left" value="' + p.name + '" onchange="updateProduct(' + i + ',\'name\',this.value,\'string\')"></td>' +
+    '<td><input type="number" class="form-input right" style="width:120px" value="' + p.revenue + '" onchange="updateProduct(' + i + ',\'revenue\',this.value)"></td>' +
+    '<td><input type="number" class="form-input right" style="width:80px" value="' + p.units + '" onchange="updateProduct(' + i + ',\'units\',this.value)"></td></tr>'
+  ).join('');
+}
+
+// 폼 내 주차 선택 상태
+let formChannelWeek = null;
+let formTrafficWeek = null;
+let formCreativeWeek = null;
+
+function loadFormChannelWeek(week) { formChannelWeek = week; renderForm(); }
+function loadFormTrafficWeek(week) { formTrafficWeek = week; renderForm(); }
+function loadFormCreativeWeek(week) { formCreativeWeek = week; renderForm(); }
+
+function getOrCreateChannelEntry(week) {
+  if (!data.channelHistory) data.channelHistory = [];
+  let entry = data.channelHistory.find(h => h.week === week);
+  if (!entry) { entry = { week, channels: [] }; data.channelHistory.push(entry); }
+  return entry;
+}
+function getOrCreateTrafficEntry(week) {
+  if (!data.trafficHistory) data.trafficHistory = [];
+  let entry = data.trafficHistory.find(h => h.week === week);
+  if (!entry) { entry = { week, traffic: [] }; data.trafficHistory.push(entry); }
+  return entry;
+}
+function getOrCreateCreativeEntry(week) {
+  if (!data.metaCreativeHistory) data.metaCreativeHistory = [];
+  let entry = data.metaCreativeHistory.find(h => h.week === week);
+  if (!entry) { entry = { week, creatives: [] }; data.metaCreativeHistory.push(entry); }
+  return entry;
+}
+
+function updateWeek(i, f, v) { if (f==='week' || f==='month') data.weeks[i][f]=v; else if (f==='cvr') data.weeks[i][f]=parseFloat(v)||0; else data.weeks[i][f]=parseInt(v)||0; }
+function updateChannel(i, f, v, t) {
+  const e = getOrCreateChannelEntry(formChannelWeek);
+  if (t==='string') e.channels[i][f]=v;
+  else if (f==='share') e.channels[i][f]=parseFloat(v)||0;
+  else e.channels[i][f]=parseInt(v)||0;
+  // 광고비/매출 변경 시 ROAS·상태 자동 재계산 표시 갱신
+  if (f==='adSpend' || f==='revenue') renderForm();
+}
+function updateBrand(i, f, v, t) { if (t==='string') data.brandSearch[i][f]=v; else data.brandSearch[i][f]=parseInt(v)||0; }
+function updateProduct(i, f, v, t) { if (t==='string') data.topProducts[i][f]=v; else data.topProducts[i][f]=parseInt(v)||0; }
+function updateFunnelHist(i, f, v, t) { if (t==='string') data.funnelHistory[i][f]=v; else data.funnelHistory[i][f]=parseInt(v)||0; }
+function updateTraffic(i, f, v, t) { const e = getOrCreateTrafficEntry(formTrafficWeek); if (t==='string') e.traffic[i][f]=v; else e.traffic[i][f]=parseInt(v)||0; }
+function updateCreative(i, f, v, t) {
+  const e = getOrCreateCreativeEntry(formCreativeWeek);
+  if (t === 'string') e.creatives[i][f] = v;
+  else if (t === 'pct') { e.creatives[i][f] = (parseFloat(v) || 0) / 100; renderForm(); }
+  else { e.creatives[i][f] = parseInt(v) || 0; renderForm(); }
+}
+
+function addWeek() { const l=data.weeks[data.weeks.length-1]; const n=parseInt(l.week.replace(/\D/g,''))+1; data.weeks.push({week:'W'+n, month:l.month||'', sessions:0,newUsers:0,revenue:0,orders:0,adSpend:0,cvr:0}); selectedWeekIdx=data.weeks.length-1; renderForm(); }
+function removeWeek(i) { if (data.weeks.length<=2) return alert('최소 2주차 이상 유지하세요'); data.weeks.splice(i,1); selectedWeekIdx=Math.min(selectedWeekIdx, data.weeks.length-1); renderForm(); }
+function addChannel() { const e = getOrCreateChannelEntry(formChannelWeek); e.channels.push({name:'신규 채널',sessions:0,share:0,adSpend:0,revenue:0,orders:0}); renderForm(); }
+function removeChannel(i) { const e = getOrCreateChannelEntry(formChannelWeek); if (e.channels.length<=1) return alert('최소 1개 채널은 유지하세요'); e.channels.splice(i,1); renderForm(); }
+function addFunnelWeek() { const l=data.funnelHistory[data.funnelHistory.length-1]; const n=l?parseInt(l.week.replace(/\D/g,''))+1:22; data.funnelHistory.push({week:'W'+n,sessions:0,productViews:0,addToCarts:0,purchases:0}); renderForm(); }
+function removeFunnelWeek(i) { if (data.funnelHistory.length<=1) return alert('최소 1개 주차는 유지하세요'); data.funnelHistory.splice(i,1); renderForm(); }
+function addTraffic() { const e = getOrCreateTrafficEntry(formTrafficWeek); e.traffic.push({platform:'네이버', type:'오가닉 검색', sessions:0, revenue:0, orders:0}); renderForm(); }
+function removeTraffic(i) { const e = getOrCreateTrafficEntry(formTrafficWeek); if (e.traffic.length<=1) return alert('최소 1개 행은 유지하세요'); e.traffic.splice(i,1); renderForm(); }
+function addCreative() { const e = getOrCreateCreativeEntry(formCreativeWeek); e.creatives.push({name:'새 소재', sessions:0, newUsers:0, orders:0, revenue:0, adSpend:0, ctr:0}); renderForm(); }
+function removeCreative(i) { const e = getOrCreateCreativeEntry(formCreativeWeek); e.creatives.splice(i,1); renderForm(); }
+function addBrandWeek() { const l=data.brandSearch[data.brandSearch.length-1]; const n=l?parseInt(l.week.replace(/\D/g,''))+1:22; data.brandSearch.push({week:'W'+n,volume:0}); renderForm(); }
+function removeBrand(i) { if (data.brandSearch.length<=2) return alert('최소 2개 이상 유지하세요'); data.brandSearch.splice(i,1); renderForm(); }
+
+function saveData() { selectedWeekIdx = data.weeks.length - 1; persistData(); closeModal(); renderAll(); showToast('✓ 저장됨 — 업데이트 완료'); }
+
+// === 주차별 데이터 헬퍼 ===
+function getWeekLabel() {
+  return (selectedWeekIdx !== null && data.weeks[selectedWeekIdx]) ? data.weeks[selectedWeekIdx].week : data.weeks[data.weeks.length-1].week;
+}
+// 채널의 ROAS와 상태(양호/중립/위험)를 매출÷광고비 기준으로 자동 계산
+function computeChannelMetrics(c) {
+  const adSpend = c.adSpend || 0;
+  const revenue = c.revenue || 0;
+  if (adSpend <= 0) return { roas: null, status: 'neutral' }; // 광고비 없는 채널(직접유입 등)은 효율 판단 제외
+  const roas = revenue / adSpend;
+  let status;
+  if (roas < 1) status = 'critical';        // ROAS 100% 미만 — 광고비 회수 실패
+  else if (roas < 2) status = 'neutral';    // ROAS 100~200% — 보통
+  else status = 'good';                     // ROAS 200% 이상 — 효율 우수
+  return { roas, status };
+}
+
+function getChannelsForWeek(week) {
+  const hist = data.channelHistory || [];
+  const entry = hist.find(h => h.week === week);
+  if (!entry) return null;
+  // 매출/광고비 기준으로 ROAS·상태 자동 산출 (저장된 roas/status 무시)
+  return entry.channels.map(c => {
+    const m = computeChannelMetrics(c);
+    return { ...c, roas: m.roas, status: m.status };
+  });
+}
+function getTrafficForWeek(week) {
+  const hist = data.trafficHistory || [];
+  const entry = hist.find(h => h.week === week);
+  return entry ? entry.traffic : null;
+}
+function getFunnelForWeek(week) {
+  const hist = data.funnelHistory || [];
+  return hist.find(h => h.week === week) || null;
+}
+function getCreativesForWeek(week) {
+  const hist = data.metaCreativeHistory || [];
+  const entry = hist.find(h => h.week === week);
+  return entry ? entry.creatives : null;
+}
+
+// === 주차 네비게이션 ===
+function renderWeekFilter() {
+  if (selectedWeekIdx === null) selectedWeekIdx = data.weeks.length - 1;
+
+  const sel = document.getElementById('week-select');
+  if (sel) {
+    sel.innerHTML = data.weeks.map((w, i) =>
+      '<option value="' + i + '"' + (i === selectedWeekIdx ? ' selected' : '') + '>' + w.week + '</option>'
+    ).join('');
+    sel.value = String(selectedWeekIdx);
+  }
+
+  const prevBtn = document.getElementById('week-prev-btn');
+  const nextBtn = document.getElementById('week-next-btn');
+  if (prevBtn) prevBtn.disabled = selectedWeekIdx <= 0;
+  if (nextBtn) nextBtn.disabled = selectedWeekIdx >= data.weeks.length - 1;
+
+  const count = document.getElementById('week-nav-count');
+  if (count) count.textContent = (selectedWeekIdx + 1) + ' / ' + data.weeks.length + '주차';
+}
+
+function navWeek(dir) {
+  const next = selectedWeekIdx + dir;
+  if (next >= 0 && next < data.weeks.length) selectWeek(next);
+}
+
+function selectWeek(idx) {
+  selectedWeekIdx = idx;
+  renderWeekFilter();
+  document.getElementById('current-week').textContent = data.weeks[idx].week;
+  renderKPIs();
+  generateInsights();
+  renderChannels();
+  renderFunnel();
+  renderTraffic();
+}
+
+// === 월별 집계 ===
+function getMonthlyData() {
+  const map = {};
+  data.weeks.forEach(w => {
+    const m = w.month || '미분류';
+    if (!map[m]) map[m] = { month: m, sessions: 0, revenue: 0, orders: 0, adSpend: 0, newUsers: 0, weekCount: 0, weeks: [] };
+    map[m].sessions += w.sessions || 0;
+    map[m].revenue += w.revenue || 0;
+    map[m].orders += w.orders || 0;
+    map[m].adSpend += w.adSpend || 0;
+    map[m].newUsers += w.newUsers || 0;
+    map[m].weekCount++;
+    map[m].weeks.push(w.week);
+  });
+  return Object.values(map).sort((a, b) => a.month.localeCompare(b.month));
+}
+
+function renderMonthly() {
+  const monthly = getMonthlyData();
+  if (monthly.length === 0) return;
+  if (charts['monthly']) { charts['monthly'].destroy(); delete charts['monthly']; }
+
+  const gridColor = '#F0EFED';
+  const textColor = '#A8A29E';
+
+  // 차트는 최근 6개월만
+  const chartData = monthly.slice(-6);
+  const canvas = document.getElementById('chart-monthly');
+  if (canvas) {
+    charts['monthly'] = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: chartData.map(m => m.month),
+        datasets: [
+          { label: '매출 (실결제)', data: chartData.map(m => m.revenue), backgroundColor: '#3B82F6', borderRadius: 5, borderSkipped: false },
+          { label: '광고비', data: chartData.map(m => m.adSpend), backgroundColor: '#EC4899', borderRadius: 5, borderSkipped: false }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: '#57534E', font: { size: 11, weight: '500' }, usePointStyle: true, pointStyle: 'circle', padding: 14 } },
+          tooltip: { backgroundColor: '#1C1917', padding: 10, titleColor: '#fff', bodyColor: '#E7E5E4', callbacks: { label: (c) => c.dataset.label + ': ' + KRW(c.parsed.y) } }
+        },
+        scales: {
+          x: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 11 } } },
+          y: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 11 }, callback: v => v >= 10000 ? (v/10000).toFixed(0)+'만' : v } }
+        }
+      }
+    });
+    // 차트 subtitle 업데이트
+    const chartSub = canvas.closest('.card')?.querySelector('.card-subtitle');
+    if (chartSub) chartSub.textContent = monthly.length > 6 ? '최근 6개월 기준 (전체 ' + monthly.length + '개월 중)' : '월 단위 집계 · 매출(실결제) vs 광고비';
+  }
+
+  // 테이블 — 전체 월, 연도별 구분선 자동 추가
+  const totals = monthly.reduce((t, m) => {
+    t.sessions += m.sessions; t.revenue += m.revenue; t.orders += m.orders;
+    t.adSpend += m.adSpend; return t;
+  }, { sessions: 0, revenue: 0, orders: 0, adSpend: 0 });
+
+  const monthRow = (m, isTot) => {
+    const mer = m.adSpend > 0 ? (m.revenue / m.adSpend * 100).toFixed(0) + '%' : '-';
+    const aov = m.orders > 0 ? KRW(Math.round(m.revenue / m.orders)) : '-';
+    const merStyle = m.adSpend > 0
+      ? (m.revenue < m.adSpend ? 'color:var(--bad);font-weight:700' : m.revenue >= m.adSpend * 2 ? 'color:var(--good);font-weight:700' : '')
+      : '';
+    const label = isTot
+      ? '<td><strong>합계</strong></td>'
+      : '<td><span class="month-badge">' + m.month + '</span><div style="font-size:10px;color:var(--text-3);margin-top:3px">' + (m.weeks||[]).join(' · ') + ' (' + m.weekCount + '주)</div></td>';
+    return '<tr' + (isTot ? ' class="total-row"' : '') + '>' + label +
+      '<td class="right">' + NUM(m.sessions) + '</td>' +
+      '<td class="right">' + NUM(m.orders) + '</td>' +
+      '<td class="right"><strong>' + KRW(m.revenue) + '</strong></td>' +
+      '<td class="right">' + KRW(m.adSpend) + '</td>' +
+      '<td class="right" style="' + merStyle + '">' + mer + '</td>' +
+      '<td class="right">' + aov + '</td>' +
+    '</tr>';
+  };
+
+  let prevYear = null;
+  const rows = monthly.map(m => {
+    const year = m.month ? m.month.slice(0, 4) : '미분류';
+    let yearHeader = '';
+    if (year !== prevYear) {
+      prevYear = year;
+      yearHeader = '<tr><td colspan="7" style="padding:12px 10px 6px;font-size:11px;font-weight:800;color:var(--text-3);letter-spacing:0.08em;text-transform:uppercase;border-bottom:2px solid var(--border-strong);background:var(--surface-2);">' + (year !== '미분류' ? year + '년' : '월 미입력') + '</td></tr>';
+    }
+    return yearHeader + monthRow(m, false);
+  }).join('');
+
+  const table = document.getElementById('table-monthly');
+  if (table) {
+    table.innerHTML =
+      '<thead><tr>' +
+        '<th>월</th><th class="right">방문수</th><th class="right">주문수</th>' +
+        '<th class="right">매출(실결제)</th><th class="right">광고비</th>' +
+        '<th class="right">MER</th><th class="right">객단가</th>' +
+      '</tr></thead><tbody>' +
+      rows +
+      (monthly.length > 1 ? monthRow(totals, true) : '') +
+      '</tbody>';
+  }
+}
+
+function renderAll() {
+  if (selectedWeekIdx === null || selectedWeekIdx >= data.weeks.length) selectedWeekIdx = data.weeks.length - 1;
+  document.getElementById('brand-name').textContent = data.brand;
+  document.getElementById('current-week').textContent = data.weeks[selectedWeekIdx].week;
+  document.getElementById('week-range').textContent = data.weeks.length > 0 ? (data.weeks[0].week + ' ~ ' + data.weeks[data.weeks.length-1].week) : '';
+  renderWeekFilter();
+  renderKPIs();
+  renderMonthly();
+  renderCharts();
+  renderChannels();
+  generateInsights();
+  renderFunnel();
+  renderTraffic();
+  renderProducts();
+}
+
+document.getElementById('today').textContent = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+loadData();
+renderAll();
+document.getElementById('modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });
+</script>
+
+
+</body></html>
